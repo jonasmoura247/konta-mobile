@@ -88,7 +88,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                 return Container(
                   margin: const EdgeInsets.all(2),
                   decoration: BoxDecoration(
-                    color: isToday ? AppColors.accent.withOpacity(0.15) : (amount != null ? AppColors.expense.withOpacity(0.08) : Colors.transparent),
+                    color: isToday ? AppColors.accent.withValues(alpha: 0.15) : (amount != null ? AppColors.expense.withValues(alpha: 0.08) : Colors.transparent),
                     borderRadius: BorderRadius.circular(8),
                     border: Border.all(color: isToday ? AppColors.accent : AppColors.cardBorder),
                   ),

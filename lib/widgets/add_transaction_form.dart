@@ -178,7 +178,7 @@ class _AddTransactionFormState extends State<AddTransactionForm> {
               const Text('Categoria', style: TextStyle(color: AppColors.textSecondary, fontSize: 12)),
               const SizedBox(height: 6),
               DropdownButtonFormField<String>(
-                value: _categoryId,
+                initialValue: _categoryId,
                 dropdownColor: AppColors.card,
                 style: const TextStyle(color: AppColors.textPrimary),
                 decoration: const InputDecoration(),
@@ -198,7 +198,7 @@ class _AddTransactionFormState extends State<AddTransactionForm> {
               const Text('Banco', style: TextStyle(color: AppColors.textSecondary, fontSize: 12)),
               const SizedBox(height: 6),
               DropdownButtonFormField<String?>(
-                value: _bankId,
+                initialValue: _bankId,
                 dropdownColor: AppColors.card,
                 style: const TextStyle(color: AppColors.textPrimary),
                 decoration: const InputDecoration(),

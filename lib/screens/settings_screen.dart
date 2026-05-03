@@ -88,9 +88,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
               title: const Text('Importar dados (JSON)', style: TextStyle(color: AppColors.textPrimary)),
               subtitle: const Text('Importar farmas-dados.json', style: TextStyle(color: AppColors.textSecondary, fontSize: 12)),
               onTap: () async {
+                final messenger = ScaffoldMessenger.of(context);
                 final result = await ImportService.importJsonFromPicker();
                 if (!mounted) return;
-                ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                messenger.showSnackBar(SnackBar(
                   content: Text(result == null
                       ? 'Importação cancelada'
                       : '${result.transactions} transações e ${result.incomes} entradas importadas'),
@@ -104,9 +105,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
               title: const Text('Exportar dados (JSON)', style: TextStyle(color: AppColors.textPrimary)),
               subtitle: const Text('Salvar backup na pasta Downloads', style: TextStyle(color: AppColors.textSecondary, fontSize: 12)),
               onTap: () async {
+                final messenger = ScaffoldMessenger.of(context);
                 final path = await ImportService.exportJsonToDownloads();
                 if (!mounted) return;
-                ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                messenger.showSnackBar(SnackBar(
                   content: Text('Exportado: $path'),
                   backgroundColor: AppColors.income,
                 ));

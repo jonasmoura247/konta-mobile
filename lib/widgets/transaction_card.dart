@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../models/transaction.dart';
 import '../models/category.dart';
 import '../theme/app_theme.dart';
 import '../utils/formatters.dart';
@@ -37,7 +36,7 @@ class TransactionCard extends StatelessWidget {
           width: 40,
           height: 40,
           decoration: BoxDecoration(
-            color: cat.color.withOpacity(0.15),
+            color: cat.color.withValues(alpha: 0.15),
             borderRadius: BorderRadius.circular(10),
           ),
           child: Icon(cat.icon, color: cat.color, size: 20),
@@ -100,7 +99,7 @@ class _Badge extends StatelessWidget {
   Widget build(BuildContext context) => Container(
         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.15),
+          color: color.withValues(alpha: 0.15),
           borderRadius: BorderRadius.circular(6),
         ),
         child: Text(label, style: TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.w600)),

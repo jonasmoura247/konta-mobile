@@ -61,7 +61,7 @@ final darkTheme = ThemeData(
     bodyMedium: TextStyle(color: AppColors.textSecondary, fontFamily: 'SpaceGrotesk'),
     labelLarge: TextStyle(color: AppColors.textPrimary, fontFamily: 'SpaceGrotesk', fontWeight: FontWeight.w600),
   ),
-  cardTheme: CardTheme(
+  cardTheme: CardThemeData(
     color: AppColors.card,
     elevation: 0,
     shape: RoundedRectangleBorder(
@@ -123,7 +123,7 @@ final darkTheme = ThemeData(
   dividerTheme: const DividerThemeData(color: AppColors.cardBorder, thickness: 1),
   switchTheme: SwitchThemeData(
     thumbColor: WidgetStateProperty.resolveWith((s) => s.contains(WidgetState.selected) ? AppColors.accent : AppColors.textSecondary),
-    trackColor: WidgetStateProperty.resolveWith((s) => s.contains(WidgetState.selected) ? AppColors.accent.withOpacity(0.3) : AppColors.cardBorder),
+    trackColor: WidgetStateProperty.resolveWith((s) => s.contains(WidgetState.selected) ? AppColors.accent.withValues(alpha: 0.3) : AppColors.cardBorder),
   ),
 );
 

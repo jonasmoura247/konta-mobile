@@ -28,7 +28,6 @@ class _HistoryScreenState extends State<HistoryScreen> {
     final transactions = DatabaseService.getAllTransactions();
     final incomes = DatabaseService.getAllIncomes();
     final familyCount = settings.familyMode ? settings.familyCount : 1;
-    final currency = settings.currency;
 
     _months = FinanceCalculator.lastNMonths(DateTime.now(), 6);
     _expenses = _months.map((m) => FinanceCalculator.summarize(transactions, incomes, m, familyCount).totalExpenses).toList();

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../models/category.dart';
 import '../services/database_service.dart';
 import '../services/finance_calculator.dart';
 import '../theme/app_theme.dart';
