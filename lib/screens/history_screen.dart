@@ -16,6 +16,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
   late List<DateTime> _months;
   late List<double> _expenses;
   late List<double> _incomes;
+  late List<double> _debits;
 
   @override
   void initState() {
@@ -29,9 +30,10 @@ class _HistoryScreenState extends State<HistoryScreen> {
     final incomes = DatabaseService.getAllIncomes();
     final familyCount = settings.familyMode ? settings.familyCount : 1;
 
-    _months = FinanceCalculator.lastNMonths(DateTime.now(), 6);
+    _months   = FinanceCalculator.lastNMonths(DateTime.now(), 6);
     _expenses = _months.map((m) => FinanceCalculator.summarize(transactions, incomes, m, familyCount).totalExpenses).toList();
-    _incomes = _months.map((m) => FinanceCalculator.summarize(transactions, incomes, m, familyCount).totalIncome).toList();
+    _incomes  = _months.map((m) => FinanceCalculator.summarize(transactions, incomes, m, familyCount).totalIncome).toList();
+    _debits   = _months.map((m) => FinanceCalculator.summarize(transactions, incomes, m, familyCount).totalDebit).toList();
     setState(() {});
   }
 
@@ -49,13 +51,13 @@ class _HistoryScreenState extends State<HistoryScreen> {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(color: context.kCard, borderRadius: BorderRadius.circular(16), border: Border.all(color: context.kCardBorder)),
-            child: BarChart6Months(months: _months, expenses: _expenses, incomes: _incomes),
+            child: BarChart6Months(months: _months, expenses: _expenses, incomes: _incomes, debits: _debits),
           ),
           const SizedBox(height: 24),
           Text('Resumo mensal', style: TextStyle(color: context.kTextPrimary, fontSize: 16, fontWeight: FontWeight.bold)),
           const SizedBox(height: 12),
           ...List.generate(_months.length, (i) {
-            final balance = _incomes[i] - _expenses[i];
+            final balance = _incomes[i] - _expenses[i] - _debits[i];
             return Container(
               margin: const EdgeInsets.only(bottom: 8),
               padding: const EdgeInsets.all(16),
@@ -69,6 +71,8 @@ class _HistoryScreenState extends State<HistoryScreen> {
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
                       Text(formatCurrency(_expenses[i], currency: currency), style: const TextStyle(color: AppColors.expense, fontSize: 13, fontFamily: 'JetBrainsMono')),
+                      if (_debits[i] > 0)
+                        Text(formatCurrency(_debits[i], currency: currency), style: const TextStyle(color: AppColors.neonCyan, fontSize: 11, fontFamily: 'JetBrainsMono')),
                       Text(formatCurrency(balance, currency: currency), style: TextStyle(color: balance >= 0 ? AppColors.income : AppColors.expense, fontSize: 11, fontFamily: 'JetBrainsMono')),
                     ],
                   ),

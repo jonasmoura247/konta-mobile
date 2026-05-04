@@ -7,17 +7,19 @@ class BarChart6Months extends StatelessWidget {
   final List<DateTime> months;
   final List<double> expenses;
   final List<double> incomes;
+  final List<double> debits;
 
   const BarChart6Months({
     super.key,
     required this.months,
     required this.expenses,
     required this.incomes,
+    required this.debits,
   });
 
   @override
   Widget build(BuildContext context) {
-    final maxVal = [...expenses, ...incomes].fold(0.0, (a, b) => a > b ? a : b);
+    final maxVal = [...expenses, ...incomes, ...debits].fold(0.0, (a, b) => a > b ? a : b);
     final gridColor = context.kCardBorder;
 
     return Column(
@@ -25,9 +27,11 @@ class BarChart6Months extends StatelessWidget {
       children: [
         const Row(
           children: [
-            _LegendDot(color: AppColors.expense, label: 'Gastos'),
+            _LegendDot(color: AppColors.expense, label: 'Cartão'),
             SizedBox(width: 16),
             _LegendDot(color: AppColors.income, label: 'Entradas'),
+            SizedBox(width: 16),
+            _LegendDot(color: AppColors.neonCyan, label: 'Débito'),
           ],
         ),
         const SizedBox(height: 12),
@@ -39,10 +43,11 @@ class BarChart6Months extends StatelessWidget {
               barGroups: List.generate(months.length, (i) => BarChartGroupData(
                 x: i,
                 barRods: [
-                  BarChartRodData(toY: expenses[i], color: AppColors.expense, width: 10, borderRadius: const BorderRadius.vertical(top: Radius.circular(4))),
-                  BarChartRodData(toY: incomes[i], color: AppColors.income, width: 10, borderRadius: const BorderRadius.vertical(top: Radius.circular(4))),
+                  BarChartRodData(toY: expenses[i], color: AppColors.expense, width: 8, borderRadius: const BorderRadius.vertical(top: Radius.circular(4))),
+                  BarChartRodData(toY: incomes[i], color: AppColors.income, width: 8, borderRadius: const BorderRadius.vertical(top: Radius.circular(4))),
+                  BarChartRodData(toY: debits[i], color: AppColors.neonCyan, width: 8, borderRadius: const BorderRadius.vertical(top: Radius.circular(4))),
                 ],
-                barsSpace: 4,
+                barsSpace: 3,
               )),
               titlesData: FlTitlesData(
                 leftTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),

@@ -32,6 +32,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   late List<DateTime> _last6Months;
   late List<double> _last6Expenses;
   late List<double> _last6Incomes;
+  late List<double> _last6Debits;
 
   @override
   void initState() {
@@ -57,6 +58,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     }).toList();
     _last6Incomes = _last6Months.map((m) {
       return FinanceCalculator.summarize(transactions, incomes, m, familyCount, familyOnly: _familyView).totalIncome;
+    }).toList();
+    _last6Debits = _last6Months.map((m) {
+      return FinanceCalculator.summarize(transactions, incomes, m, familyCount, familyOnly: _familyView).totalDebit;
     }).toList();
   }
 
@@ -268,10 +272,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                       Row(
                         children: [
                           Expanded(child: SummaryCard(
-                            label: 'Gastos',
+                            label: 'Cartão',
                             value: _summary.totalExpenses,
                             color: AppColors.expense,
-                            icon: Icons.trending_down,
+                            icon: Icons.credit_card,
                             currency: currency,
                           )),
                           const SizedBox(width: 10),
@@ -286,6 +290,16 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                         ],
                       ),
                       const SizedBox(height: 10),
+                      if (_summary.totalDebit > 0) ...[
+                        SummaryCard(
+                          label: 'Débito',
+                          value: _summary.totalDebit,
+                          color: AppColors.neonCyan,
+                          icon: Icons.payment,
+                          currency: currency,
+                        ),
+                        const SizedBox(height: 10),
+                      ],
                       SummaryCard(
                         label: 'Saldo',
                         value: _summary.balance,
@@ -348,7 +362,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(color: context.kCard, borderRadius: BorderRadius.circular(16), border: Border.all(color: context.kCardBorder)),
-                      child: BarChart6Months(months: _last6Months, expenses: _last6Expenses, incomes: _last6Incomes),
+                      child: BarChart6Months(months: _last6Months, expenses: _last6Expenses, incomes: _last6Incomes, debits: _last6Debits),
                     ),
                     const SizedBox(height: 80),
                   ],

@@ -8,6 +8,7 @@ import '../utils/formatters.dart';
 import '../widgets/transaction_card.dart';
 import '../widgets/add_transaction_form.dart';
 import '../widgets/month_picker_button.dart';
+import '../widgets/debit_chart.dart';
 
 // ── Sort options ──────────────────────────────────────────────────────────────
 enum TxSort { dateAsc, dateDesc, amountDesc, amountAsc, nameAz, type, category }
@@ -34,15 +35,24 @@ class TransactionsScreen extends StatefulWidget {
   State<TransactionsScreen> createState() => _TransactionsScreenState();
 }
 
-class _TransactionsScreenState extends State<TransactionsScreen> {
+class _TransactionsScreenState extends State<TransactionsScreen>
+    with SingleTickerProviderStateMixin {
+  late final TabController _tabCtrl;
   DateTime _activeMonth = DateTime.now();
-  List<TransactionOccurrence> _occurrences = [];
 
-  // Filters
-  String _filterGroup  = 'all';
-  String _filterCat    = 'all';
-  String _filterBank   = 'all';
-  TxSort _sortBy       = TxSort.dateAsc;
+  List<TransactionOccurrence> _creditOccurrences = [];
+  List<TransactionOccurrence> _debitOccurrences = [];
+
+  // Filtros da aba Cartão
+  String _creditFilterGroup = 'all';
+  String _creditFilterCat   = 'all';
+  String _creditFilterBank  = 'all';
+  TxSort _creditSortBy      = TxSort.dateAsc;
+
+  // Filtros da aba Débito
+  String _debitFilterCat  = 'all';
+  String _debitFilterBank = 'all';
+  TxSort _debitSortBy     = TxSort.dateAsc;
 
   static const _groupLabels = {
     'avista':       'À Vista',
@@ -54,48 +64,81 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
   @override
   void initState() {
     super.initState();
+    _tabCtrl = TabController(length: 2, vsync: this);
+    _tabCtrl.addListener(() => setState(() {}));
     _load();
+  }
+
+  @override
+  void dispose() {
+    _tabCtrl.dispose();
+    super.dispose();
   }
 
   void _load() {
     final settings = DatabaseService.getSettings();
     final familyCount = settings.familyMode ? settings.familyCount : 1;
+    final allTx = DatabaseService.getAllTransactions();
     setState(() {
-      _occurrences = FinanceCalculator.getOccurrencesForMonth(
-        DatabaseService.getAllTransactions(),
-        _activeMonth,
-        familyCount,
-      );
+      _creditOccurrences = FinanceCalculator.getOccurrencesForMonth(allTx, _activeMonth, familyCount);
+      _debitOccurrences  = FinanceCalculator.getDebitOccurrencesForMonth(allTx, _activeMonth, familyCount);
     });
   }
 
-  void _changeMonth(int delta) {
-    _activeMonth = DateTime(_activeMonth.year, _activeMonth.month + delta);
-    _load();
+  // ── Dados computados ──────────────────────────────────────────────────────
+
+  Map<String, double> get _byDebitCategory {
+    final map = <String, double>{};
+    for (final o in _debitOccurrences) {
+      map[o.transaction.categoryId] = (map[o.transaction.categoryId] ?? 0) + o.amount;
+    }
+    return map;
   }
 
-  List<TransactionOccurrence> get _filtered {
-    List<TransactionOccurrence> list = [..._occurrences];
+  double get _totalDebit => _debitOccurrences.fold(0.0, (s, o) => s + o.amount);
 
-    if (_filterGroup != 'all') {
-      list = list.where((o) => o.transaction.groupId == _filterGroup).toList();
+  // ── Filtragem e ordenação ─────────────────────────────────────────────────
+
+  List<TransactionOccurrence> get _filteredCredit {
+    List<TransactionOccurrence> list = [..._creditOccurrences];
+
+    if (_creditFilterGroup != 'all') {
+      list = list.where((o) => o.transaction.groupId == _creditFilterGroup).toList();
     }
-    if (_filterCat != 'all') {
-      list = list.where((o) => o.transaction.categoryId == _filterCat).toList();
+    if (_creditFilterCat != 'all') {
+      list = list.where((o) => o.transaction.categoryId == _creditFilterCat).toList();
     }
-    if (_filterBank != 'all') {
-      if (_filterBank == 'none') {
+    if (_creditFilterBank != 'all') {
+      if (_creditFilterBank == 'none') {
         list = list.where((o) => o.transaction.bankId == null).toList();
       } else {
-        list = list.where((o) => o.transaction.bankId == _filterBank).toList();
+        list = list.where((o) => o.transaction.bankId == _creditFilterBank).toList();
       }
     }
+    return _applySorting(list, _creditSortBy);
+  }
 
+  List<TransactionOccurrence> get _filteredDebit {
+    List<TransactionOccurrence> list = [..._debitOccurrences];
+    if (_debitFilterCat != 'all') {
+      list = list.where((o) => o.transaction.categoryId == _debitFilterCat).toList();
+    }
+    if (_debitFilterBank != 'all') {
+      if (_debitFilterBank == 'none') {
+        list = list.where((o) => o.transaction.bankId == null).toList();
+      } else {
+        list = list.where((o) => o.transaction.bankId == _debitFilterBank).toList();
+      }
+    }
+    return _applySorting(list, _debitSortBy);
+  }
+
+  List<TransactionOccurrence> _applySorting(List<TransactionOccurrence> list, TxSort sort) {
     final cats = getAllCategories();
     String catName(String id) => cats.firstWhere((c) => c.id == id, orElse: () => cats.last).name;
     int groupRank(String id) => _groupOrder[id] ?? 99;
 
-    switch (_sortBy) {
+    switch (sort) {
       case TxSort.dateAsc:
         list.sort((a, b) => a.transaction.startDate.compareTo(b.transaction.startDate));
       case TxSort.dateDesc:
@@ -123,48 +166,212 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
           return a.transaction.startDate.compareTo(b.transaction.startDate);
         });
     }
-
     return list;
   }
 
-  void _showFilterSheet() {
+  // ── Estados de filtro ativos ──────────────────────────────────────────────
+
+  bool get _creditHasFilters =>
+      _creditFilterGroup != 'all' || _creditFilterCat != 'all' ||
+      _creditFilterBank != 'all' || _creditSortBy != TxSort.dateAsc;
+
+  bool get _debitHasFilters =>
+      _debitFilterCat != 'all' || _debitFilterBank != 'all' || _debitSortBy != TxSort.dateAsc;
+
+  void _clearCurrentFilters() {
+    setState(() {
+      if (_tabCtrl.index == 0) {
+        _creditFilterGroup = 'all';
+        _creditFilterCat   = 'all';
+        _creditFilterBank  = 'all';
+        _creditSortBy      = TxSort.dateAsc;
+      } else {
+        _debitFilterCat  = 'all';
+        _debitFilterBank = 'all';
+        _debitSortBy     = TxSort.dateAsc;
+      }
+    });
+  }
+
+  void _showFilterSheet(bool isDebit) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (_) => _FilterSheet(
-        filterGroup: _filterGroup,
-        filterCat: _filterCat,
-        filterBank: _filterBank,
-        sortBy: _sortBy,
-        groupLabels: _groupLabels,
+        filterGroup:    isDebit ? 'all'         : _creditFilterGroup,
+        filterCat:      isDebit ? _debitFilterCat  : _creditFilterCat,
+        filterBank:     isDebit ? _debitFilterBank : _creditFilterBank,
+        sortBy:         isDebit ? _debitSortBy     : _creditSortBy,
+        groupLabels:    _groupLabels,
+        showGroupFilter: !isDebit,
         onApply: (g, c, b, s) {
           setState(() {
-            _filterGroup = g;
-            _filterCat = c;
-            _filterBank = b;
-            _sortBy = s;
+            if (isDebit) {
+              _debitFilterCat  = c;
+              _debitFilterBank = b;
+              _debitSortBy     = s;
+            } else {
+              _creditFilterGroup = g;
+              _creditFilterCat   = c;
+              _creditFilterBank  = b;
+              _creditSortBy      = s;
+            }
           });
         },
       ),
     );
   }
 
-  bool get _hasActiveFilters =>
-      _filterGroup != 'all' || _filterCat != 'all' || _filterBank != 'all' || _sortBy != TxSort.dateAsc;
+  // ── Construção da UI ──────────────────────────────────────────────────────
 
-  void _clearFilters() => setState(() {
-        _filterGroup = 'all';
-        _filterCat = 'all';
-        _filterBank = 'all';
-        _sortBy = TxSort.dateAsc;
-      });
+  Widget _buildFilterBar(BuildContext context, {required bool isDebit}) {
+    final currency = DatabaseService.getSettings().currency;
+    final filtered = isDebit ? _filteredDebit : _filteredCredit;
+    final total = filtered.fold<double>(0, (s, o) => s + o.amount);
+    final hasFilters = isDebit ? _debitHasFilters : _creditHasFilters;
+    final activeSort = isDebit ? _debitSortBy : _creditSortBy;
+
+    return Container(
+      color: context.kBg,
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+      child: Row(
+        children: [
+          GestureDetector(
+            onTap: () => _showFilterSheet(isDebit),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+              decoration: BoxDecoration(
+                color: hasFilters ? AppColors.accent.withValues(alpha: 0.15) : context.kCard,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color: hasFilters ? AppColors.accent : context.kCardBorder,
+                  width: hasFilters ? 1.5 : 1,
+                ),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.tune_rounded, size: 14,
+                      color: hasFilters ? AppColors.accent : context.kTextSecondary),
+                  const SizedBox(width: 6),
+                  Text('Filtrar',
+                      style: TextStyle(
+                        color: hasFilters ? AppColors.accent : context.kTextSecondary,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      )),
+                  if (hasFilters) ...[
+                    const SizedBox(width: 6),
+                    Text('· ${activeSort.label}',
+                        style: TextStyle(color: AppColors.accent.withValues(alpha: 0.8), fontSize: 10)),
+                  ],
+                ],
+              ),
+            ),
+          ),
+          if (hasFilters) ...[
+            const SizedBox(width: 8),
+            GestureDetector(
+              onTap: _clearCurrentFilters,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                decoration: BoxDecoration(
+                  color: AppColors.expense.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: AppColors.expense.withValues(alpha: 0.4)),
+                ),
+                child: const Text('Limpar', style: TextStyle(color: AppColors.expense, fontSize: 12, fontWeight: FontWeight.w600)),
+              ),
+            ),
+          ],
+          const Spacer(),
+          Text(
+            '${filtered.length} · ${formatCurrency(total, currency: currency)}',
+            style: TextStyle(color: context.kTextSecondary, fontSize: 11, fontFamily: 'JetBrainsMono'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTransactionList(
+    BuildContext context,
+    List<TransactionOccurrence> filtered, {
+    required bool isDebit,
+    bool hasFilters = false,
+  }) {
+    final currency = DatabaseService.getSettings().currency;
+
+    if (filtered.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(isDebit ? '💳' : '💸', style: const TextStyle(fontSize: 32)),
+            const SizedBox(height: 12),
+            Text(
+              hasFilters
+                  ? 'Nenhum resultado para os filtros.'
+                  : isDebit
+                      ? 'Nenhum débito neste mês'
+                      : 'Nenhum lançamento neste mês',
+              style: TextStyle(color: context.kTextSecondary, fontSize: 13),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return ListView.builder(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
+      itemCount: filtered.length,
+      itemBuilder: (ctx, i) {
+        final o = filtered[i];
+        return TransactionCard(
+          occurrence: o,
+          currency: currency,
+          onEdit: () => showModalBottomSheet(
+            context: context,
+            isScrollControlled: true,
+            backgroundColor: Colors.transparent,
+            builder: (_) => AddTransactionForm(
+              editing: o.transaction,
+              onSave: (t) async {
+                await DatabaseService.updateTransaction(t);
+                _load();
+              },
+            ),
+          ),
+          onDelete: () => showDialog(
+            context: context,
+            builder: (_) => AlertDialog(
+              backgroundColor: context.kCard,
+              title: Text('Excluir lançamento?', style: TextStyle(color: context.kTextPrimary)),
+              content: Text(o.transaction.description, style: TextStyle(color: context.kTextSecondary)),
+              actions: [
+                TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancelar')),
+                TextButton(
+                  onPressed: () async {
+                    await DatabaseService.deleteTransaction(o.transaction);
+                    if (context.mounted) Navigator.pop(context);
+                    _load();
+                  },
+                  child: const Text('Excluir', style: TextStyle(color: AppColors.expense)),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
-    final currency = DatabaseService.getSettings().currency;
-    final filtered = _filtered;
-    final total = filtered.fold<double>(0, (s, o) => s + o.amount);
+    final isDebitTab = _tabCtrl.index == 1;
+    final creditFiltered = _filteredCredit;
+    final debitFiltered  = _filteredDebit;
 
     return Scaffold(
       appBar: AppBar(
@@ -181,129 +388,66 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
             ),
           ),
         ],
+        bottom: TabBar(
+          controller: _tabCtrl,
+          labelColor: AppColors.accent,
+          unselectedLabelColor: context.kTextSecondary,
+          indicatorColor: AppColors.accent,
+          tabs: const [
+            Tab(text: 'Cartão'),
+            Tab(text: 'Débito'),
+          ],
+        ),
       ),
-      body: Column(
+      body: TabBarView(
+        controller: _tabCtrl,
         children: [
-          // ── Barra de filtros ────────────────────────────────────────────
-          Container(
-            color: context.kBg,
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-            child: Row(
-              children: [
-                // Botão filtrar
-                GestureDetector(
-                  onTap: _showFilterSheet,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-                    decoration: BoxDecoration(
-                      color: _hasActiveFilters ? AppColors.accent.withValues(alpha: 0.15) : context.kCard,
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(
-                        color: _hasActiveFilters ? AppColors.accent : context.kCardBorder,
-                        width: _hasActiveFilters ? 1.5 : 1,
-                      ),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.tune_rounded, size: 14,
-                            color: _hasActiveFilters ? AppColors.accent : context.kTextSecondary),
-                        const SizedBox(width: 6),
-                        Text('Filtrar',
-                            style: TextStyle(
-                              color: _hasActiveFilters ? AppColors.accent : context.kTextSecondary,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                            )),
-                        if (_hasActiveFilters) ...[
-                          const SizedBox(width: 6),
-                          Text('· ${_sortBy.label}',
-                              style: TextStyle(color: AppColors.accent.withValues(alpha: 0.8), fontSize: 10)),
-                        ],
-                      ],
-                    ),
-                  ),
+          // ── Aba Cartão ────────────────────────────────────────────────────
+          Column(
+            children: [
+              _buildFilterBar(context, isDebit: false),
+              Expanded(
+                child: _buildTransactionList(
+                  context,
+                  creditFiltered,
+                  isDebit: false,
+                  hasFilters: _creditHasFilters,
                 ),
-                if (_hasActiveFilters) ...[
-                  const SizedBox(width: 8),
-                  GestureDetector(
-                    onTap: _clearFilters,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-                      decoration: BoxDecoration(
-                        color: AppColors.expense.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: AppColors.expense.withValues(alpha: 0.4)),
-                      ),
-                      child: const Text('Limpar', style: TextStyle(color: AppColors.expense, fontSize: 12, fontWeight: FontWeight.w600)),
-                    ),
+              ),
+            ],
+          ),
+
+          // ── Aba Débito ────────────────────────────────────────────────────
+          Column(
+            children: [
+              _buildFilterBar(context, isDebit: true),
+              // Gráfico de débito por categoria (visível quando há dados)
+              if (_totalDebit > 0) ...[
+                Container(
+                  margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                  padding: const EdgeInsets.all(16),
+                  height: 196,
+                  decoration: BoxDecoration(
+                    color: context.kCard,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: context.kCardBorder),
                   ),
-                ],
-                const Spacer(),
-                // Contador + total
-                Text(
-                  '${filtered.length} · ${formatCurrency(total, currency: currency)}',
-                  style: TextStyle(color: context.kTextSecondary, fontSize: 11, fontFamily: 'JetBrainsMono'),
+                  child: DebitChart(
+                    byCategory: _byDebitCategory,
+                    totalDebit: _totalDebit,
+                    currency: DatabaseService.getSettings().currency,
+                  ),
                 ),
               ],
-            ),
-          ),
-          // ── Lista ────────────────────────────────────────────────────────
-          Expanded(
-            child: filtered.isEmpty
-                ? Center(child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Text('💸', style: TextStyle(fontSize: 32)),
-                      const SizedBox(height: 12),
-                      Text(
-                        _hasActiveFilters ? 'Nenhum resultado para os filtros.' : 'Nenhum lançamento neste mês',
-                        style: TextStyle(color: context.kTextSecondary, fontSize: 13),
-                      ),
-                    ],
-                  ))
-                : ListView.builder(
-                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
-                    itemCount: filtered.length,
-                    itemBuilder: (ctx, i) {
-                      final o = filtered[i];
-                      return TransactionCard(
-                        occurrence: o,
-                        currency: currency,
-                        onEdit: () => showModalBottomSheet(
-                          context: context,
-                          isScrollControlled: true,
-                          backgroundColor: Colors.transparent,
-                          builder: (_) => AddTransactionForm(
-                            editing: o.transaction,
-                            onSave: (t) async {
-                              await DatabaseService.updateTransaction(t);
-                              _load();
-                            },
-                          ),
-                        ),
-                        onDelete: () => showDialog(
-                          context: context,
-                          builder: (_) => AlertDialog(
-                            backgroundColor: context.kCard,
-                            title: Text('Excluir lançamento?', style: TextStyle(color: context.kTextPrimary)),
-                            content: Text(o.transaction.description, style: TextStyle(color: context.kTextSecondary)),
-                            actions: [
-                              TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancelar')),
-                              TextButton(
-                                onPressed: () async {
-                                  await DatabaseService.deleteTransaction(o.transaction);
-                                  if (context.mounted) Navigator.pop(context);
-                                  _load();
-                                },
-                                child: const Text('Excluir', style: TextStyle(color: AppColors.expense)),
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
-                    },
-                  ),
+              Expanded(
+                child: _buildTransactionList(
+                  context,
+                  debitFiltered,
+                  isDebit: true,
+                  hasFilters: _debitHasFilters,
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -313,6 +457,7 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
           isScrollControlled: true,
           backgroundColor: Colors.transparent,
           builder: (_) => AddTransactionForm(
+            isDebit: isDebitTab,
             onSave: (t) async {
               await DatabaseService.addTransaction(t);
               _load();
@@ -332,6 +477,7 @@ class _FilterSheet extends StatefulWidget {
   final String filterBank;
   final TxSort sortBy;
   final Map<String, String> groupLabels;
+  final bool showGroupFilter;
   final void Function(String, String, String, TxSort) onApply;
 
   const _FilterSheet({
@@ -341,6 +487,7 @@ class _FilterSheet extends StatefulWidget {
     required this.sortBy,
     required this.groupLabels,
     required this.onApply,
+    this.showGroupFilter = true,
   });
 
   @override
@@ -407,7 +554,6 @@ class _FilterSheetState extends State<_FilterSheet> {
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Drag handle
             Center(
               child: Container(width: 40, height: 4, decoration: BoxDecoration(color: context.kCardBorder, borderRadius: BorderRadius.circular(2))),
             ),
@@ -423,17 +569,18 @@ class _FilterSheetState extends State<_FilterSheet> {
               ],
             ),
 
-            // ── Grupo / Tipo ──────────────────────────────────────────────
-            _sectionLabel('TIPO DE LANÇAMENTO'),
-            Wrap(
-              children: [
-                _optionChip('Todos', _group == 'all', () => setState(() => _group = 'all')),
-                ...widget.groupLabels.entries.map((e) =>
-                    _optionChip(e.value, _group == e.key, () => setState(() => _group = e.key))),
-              ],
-            ),
+            // Tipo de lançamento (apenas aba Cartão)
+            if (widget.showGroupFilter) ...[
+              _sectionLabel('TIPO DE LANÇAMENTO'),
+              Wrap(
+                children: [
+                  _optionChip('Todos', _group == 'all', () => setState(() => _group = 'all')),
+                  ...widget.groupLabels.entries.map((e) =>
+                      _optionChip(e.value, _group == e.key, () => setState(() => _group = e.key))),
+                ],
+              ),
+            ],
 
-            // ── Categoria ─────────────────────────────────────────────────
             _sectionLabel('CATEGORIA'),
             Wrap(
               children: [
@@ -442,7 +589,6 @@ class _FilterSheetState extends State<_FilterSheet> {
               ],
             ),
 
-            // ── Banco ─────────────────────────────────────────────────────
             _sectionLabel('CARTÃO / BANCO'),
             Wrap(
               children: [
@@ -452,7 +598,6 @@ class _FilterSheetState extends State<_FilterSheet> {
               ],
             ),
 
-            // ── Ordenação ────────────────────────────────────────────────
             _sectionLabel('ORDENAR POR'),
             Wrap(
               children: TxSort.values.map((s) =>
@@ -460,7 +605,6 @@ class _FilterSheetState extends State<_FilterSheet> {
             ),
 
             const SizedBox(height: 12),
-            // Aplicar
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
@@ -483,4 +627,3 @@ class _FilterSheetState extends State<_FilterSheet> {
     );
   }
 }
-

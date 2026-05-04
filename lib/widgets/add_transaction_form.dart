@@ -10,8 +10,9 @@ import '../utils/formatters.dart';
 class AddTransactionForm extends StatefulWidget {
   final Transaction? editing;
   final void Function(Transaction) onSave;
+  final bool isDebit;
 
-  const AddTransactionForm({super.key, this.editing, required this.onSave});
+  const AddTransactionForm({super.key, this.editing, required this.onSave, this.isDebit = false});
 
   @override
   State<AddTransactionForm> createState() => _AddTransactionFormState();
@@ -23,11 +24,13 @@ class _AddTransactionFormState extends State<AddTransactionForm> {
   final _amountCtrl = TextEditingController();
   final _installCtrl = TextEditingController(text: '1');
 
-  String _groupId = 'avista';
+  late String _groupId;
   String _categoryId = 'outros';
   String? _bankId;
   DateTime _date = DateTime.now();
   bool _familyMode = false;
+
+  bool get _isDebitMode => _groupId == 'debito';
 
   @override
   void initState() {
@@ -42,6 +45,8 @@ class _AddTransactionFormState extends State<AddTransactionForm> {
       _bankId = e.bankId;
       _date = e.startDate;
       _familyMode = e.familyMode;
+    } else {
+      _groupId = widget.isDebit ? 'debito' : 'avista';
     }
   }
 
@@ -101,24 +106,28 @@ class _AddTransactionFormState extends State<AddTransactionForm> {
               ),
               const SizedBox(height: 16),
               Text(
-                widget.editing == null ? 'Novo Lançamento' : 'Editar Lançamento',
+                widget.editing == null
+                    ? (_isDebitMode ? 'Novo Débito' : 'Novo Lançamento')
+                    : (_isDebitMode ? 'Editar Débito' : 'Editar Lançamento'),
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: context.kTextPrimary),
               ),
               const SizedBox(height: 20),
 
-              // Tipo
-              Text('Tipo', style: TextStyle(color: context.kTextSecondary, fontSize: 12)),
-              const SizedBox(height: 6),
-              Row(
-                children: [
-                  _GroupChip('À Vista', 'avista', _groupId, (v) => setState(() => _groupId = v)),
-                  const SizedBox(width: 8),
-                  _GroupChip('Parcelado', 'parcelamento', _groupId, (v) => setState(() => _groupId = v)),
-                  const SizedBox(width: 8),
-                  _GroupChip('Assinatura', 'assinatura', _groupId, (v) => setState(() => _groupId = v)),
-                ],
-              ),
-              const SizedBox(height: 16),
+              // Tipo (oculto no modo débito — groupId fica fixo em 'debito')
+              if (!_isDebitMode) ...[
+                Text('Tipo', style: TextStyle(color: context.kTextSecondary, fontSize: 12)),
+                const SizedBox(height: 6),
+                Row(
+                  children: [
+                    _GroupChip('À Vista', 'avista', _groupId, (v) => setState(() => _groupId = v)),
+                    const SizedBox(width: 8),
+                    _GroupChip('Parcelado', 'parcelamento', _groupId, (v) => setState(() => _groupId = v)),
+                    const SizedBox(width: 8),
+                    _GroupChip('Assinatura', 'assinatura', _groupId, (v) => setState(() => _groupId = v)),
+                  ],
+                ),
+                const SizedBox(height: 16),
+              ],
 
               // Descrição
               TextFormField(

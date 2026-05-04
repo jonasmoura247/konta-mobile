@@ -28,6 +28,7 @@ String groupLabel(String groupId) {
     case 'avista': return 'À Vista';
     case 'parcelamento': return 'Parcelamento';
     case 'assinatura': return 'Assinatura';
+    case 'debito': return 'Débito';
     default: return groupId;
   }
 }
