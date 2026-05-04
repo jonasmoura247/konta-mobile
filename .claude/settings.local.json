@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\Jonas\\\\Desktop\\\\farmas_mobile\" -Recurse -File -Name)",
+      "Bash(Select-Object -First 50)",
+      "Bash(flutter analyze *)"
+    ]
+  }
+}
