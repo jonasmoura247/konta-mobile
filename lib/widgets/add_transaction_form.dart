@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:uuid/uuid.dart';
 import '../models/transaction.dart';
 import '../models/category.dart';
+import '../models/bank.dart';
 import '../theme/app_theme.dart';
 import '../utils/formatters.dart';
 
@@ -82,9 +83,9 @@ class _AddTransactionFormState extends State<AddTransactionForm> {
       maxChildSize: 0.95,
       expand: false,
       builder: (_, scrollCtrl) => Container(
-        decoration: const BoxDecoration(
-          color: AppColors.card,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        decoration: BoxDecoration(
+          color: context.kCard,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
         ),
         child: Form(
           key: _formKey,
@@ -95,18 +96,18 @@ class _AddTransactionFormState extends State<AddTransactionForm> {
               Center(
                 child: Container(
                   width: 40, height: 4,
-                  decoration: BoxDecoration(color: AppColors.cardBorder, borderRadius: BorderRadius.circular(2)),
+                  decoration: BoxDecoration(color: context.kCardBorder, borderRadius: BorderRadius.circular(2)),
                 ),
               ),
               const SizedBox(height: 16),
               Text(
                 widget.editing == null ? 'Novo Lançamento' : 'Editar Lançamento',
-                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: context.kTextPrimary),
               ),
               const SizedBox(height: 20),
 
               // Tipo
-              const Text('Tipo', style: TextStyle(color: AppColors.textSecondary, fontSize: 12)),
+              Text('Tipo', style: TextStyle(color: context.kTextSecondary, fontSize: 12)),
               const SizedBox(height: 6),
               Row(
                 children: [
@@ -122,7 +123,7 @@ class _AddTransactionFormState extends State<AddTransactionForm> {
               // Descrição
               TextFormField(
                 controller: _descCtrl,
-                style: const TextStyle(color: AppColors.textPrimary),
+                style: TextStyle(color: context.kTextPrimary),
                 decoration: const InputDecoration(labelText: 'Descrição'),
                 validator: (v) => (v == null || v.trim().isEmpty) ? 'Obrigatório' : null,
               ),
@@ -131,7 +132,7 @@ class _AddTransactionFormState extends State<AddTransactionForm> {
               // Valor
               TextFormField(
                 controller: _amountCtrl,
-                style: const TextStyle(color: AppColors.textPrimary, fontFamily: 'JetBrainsMono'),
+                style: TextStyle(color: context.kTextPrimary, fontFamily: 'JetBrainsMono'),
                 decoration: const InputDecoration(labelText: 'Valor (R\$)', prefixText: 'R\$ '),
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
                 inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[\d,.]'))],
@@ -148,7 +149,7 @@ class _AddTransactionFormState extends State<AddTransactionForm> {
               if (_groupId == 'parcelamento') ...[
                 TextFormField(
                   controller: _installCtrl,
-                  style: const TextStyle(color: AppColors.textPrimary),
+                  style: TextStyle(color: context.kTextPrimary),
                   decoration: const InputDecoration(labelText: 'Número de parcelas'),
                   keyboardType: TextInputType.number,
                   inputFormatters: [FilteringTextInputFormatter.digitsOnly],
@@ -159,8 +160,8 @@ class _AddTransactionFormState extends State<AddTransactionForm> {
               // Data
               ListTile(
                 contentPadding: EdgeInsets.zero,
-                title: const Text('Data', style: TextStyle(color: AppColors.textSecondary, fontSize: 12)),
-                subtitle: Text(formatDate(_date), style: const TextStyle(color: AppColors.textPrimary)),
+                title: Text('Data', style: TextStyle(color: context.kTextSecondary, fontSize: 12)),
+                subtitle: Text(formatDate(_date), style: TextStyle(color: context.kTextPrimary)),
                 trailing: const Icon(Icons.calendar_today, color: AppColors.accent, size: 18),
                 onTap: () async {
                   final picked = await showDatePicker(
@@ -175,12 +176,12 @@ class _AddTransactionFormState extends State<AddTransactionForm> {
               const SizedBox(height: 12),
 
               // Categoria
-              const Text('Categoria', style: TextStyle(color: AppColors.textSecondary, fontSize: 12)),
+              Text('Categoria', style: TextStyle(color: context.kTextSecondary, fontSize: 12)),
               const SizedBox(height: 6),
               DropdownButtonFormField<String>(
                 initialValue: _categoryId,
-                dropdownColor: AppColors.card,
-                style: const TextStyle(color: AppColors.textPrimary),
+                dropdownColor: context.kCard,
+                style: TextStyle(color: context.kTextPrimary),
                 decoration: const InputDecoration(),
                 items: getAllCategories().map((c) => DropdownMenuItem(
                   value: c.id,
@@ -195,18 +196,23 @@ class _AddTransactionFormState extends State<AddTransactionForm> {
               const SizedBox(height: 12),
 
               // Banco
-              const Text('Banco', style: TextStyle(color: AppColors.textSecondary, fontSize: 12)),
+              Text('Banco', style: TextStyle(color: context.kTextSecondary, fontSize: 12)),
               const SizedBox(height: 6),
               DropdownButtonFormField<String?>(
                 initialValue: _bankId,
-                dropdownColor: AppColors.card,
-                style: const TextStyle(color: AppColors.textPrimary),
+                dropdownColor: context.kCard,
+                style: TextStyle(color: context.kTextPrimary),
                 decoration: const InputDecoration(),
-                items: const [
-                  DropdownMenuItem(value: null, child: Text('Sem banco')),
-                  DropdownMenuItem(value: 'itau', child: Text('Itaú')),
-                  DropdownMenuItem(value: 'nubank', child: Text('Nubank')),
-                  DropdownMenuItem(value: 'inter', child: Text('Inter')),
+                items: [
+                  const DropdownMenuItem(value: null, child: Text('Sem banco')),
+                  ...getAllBanks().map((b) => DropdownMenuItem(
+                    value: b.id,
+                    child: Row(children: [
+                      Container(width: 10, height: 10, decoration: BoxDecoration(color: b.color, shape: BoxShape.circle)),
+                      const SizedBox(width: 6),
+                      Text(b.name),
+                    ]),
+                  )),
                 ],
                 onChanged: (v) => setState(() => _bankId = v),
               ),
@@ -215,7 +221,7 @@ class _AddTransactionFormState extends State<AddTransactionForm> {
               // Modo família
               SwitchListTile(
                 contentPadding: EdgeInsets.zero,
-                title: const Text('Modo família (dividir valor)', style: TextStyle(color: AppColors.textPrimary, fontSize: 14)),
+                title: Text('Modo família (dividir valor)', style: TextStyle(color: context.kTextPrimary, fontSize: 14)),
                 value: _familyMode,
                 onChanged: (v) => setState(() => _familyMode = v),
               ),
@@ -250,10 +256,10 @@ class _GroupChip extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
-          color: isSelected ? AppColors.accent : AppColors.cardBorder,
+          color: isSelected ? AppColors.accent : context.kCardBorder,
           borderRadius: BorderRadius.circular(20),
         ),
-        child: Text(label, style: TextStyle(color: isSelected ? Colors.white : AppColors.textSecondary, fontSize: 12, fontWeight: FontWeight.w600)),
+        child: Text(label, style: TextStyle(color: isSelected ? Colors.white : context.kTextSecondary, fontSize: 12, fontWeight: FontWeight.w600)),
       ),
     );
   }

@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:path_provider/path_provider.dart';
@@ -15,11 +16,11 @@ class ImportService {
     final bytes = result.files.first.bytes;
     String jsonString;
     if (bytes != null) {
-      jsonString = String.fromCharCodes(bytes);
+      jsonString = utf8.decode(bytes);
     } else {
       final path = result.files.first.path;
       if (path == null) return null;
-      jsonString = await File(path).readAsString();
+      jsonString = await File(path).readAsString(encoding: utf8);
     }
 
     return DatabaseService.importFromJson(jsonString);

@@ -8,6 +8,7 @@ class SummaryCard extends StatelessWidget {
   final Color color;
   final IconData icon;
   final String currency;
+  final VoidCallback? onTap;
 
   const SummaryCard({
     super.key,
@@ -16,14 +17,15 @@ class SummaryCard extends StatelessWidget {
     required this.color,
     required this.icon,
     this.currency = 'BRL',
+    this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    final card = Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.card,
+        color: context.kCard,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: color.withValues(alpha: 0.3), width: 1),
       ),
@@ -34,7 +36,14 @@ class SummaryCard extends StatelessWidget {
             children: [
               Icon(icon, color: color, size: 18),
               const SizedBox(width: 6),
-              Text(label, style: const TextStyle(color: AppColors.textSecondary, fontSize: 12)),
+              Expanded(
+                child: Text(label, style: TextStyle(color: context.kTextSecondary, fontSize: 12)),
+              ),
+              if (onTap != null)
+                GestureDetector(
+                  onTap: onTap,
+                  child: Icon(Icons.add_circle_outline, color: color, size: 18),
+                ),
             ],
           ),
           const SizedBox(height: 8),
@@ -49,6 +58,13 @@ class SummaryCard extends StatelessWidget {
           ),
         ],
       ),
+    );
+
+    if (onTap == null) return card;
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: card,
     );
   }
 }

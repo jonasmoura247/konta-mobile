@@ -8,6 +8,29 @@ class DatabaseService {
   static Box<Transaction> get txBox => Hive.box<Transaction>('transactions');
   static Box<Income> get incomeBox => Hive.box<Income>('incomes');
   static Box<AppSettings> get settingsBox => Hive.box<AppSettings>('settings');
+  static Box<String> get metaBox => Hive.box<String>('meta');
+
+  // --- META: Custom Categories ---
+
+  static List<Map<String, dynamic>> getCustomCategories() {
+    final json = metaBox.get('custom_categories', defaultValue: '[]')!;
+    return List<Map<String, dynamic>>.from(jsonDecode(json) as List);
+  }
+
+  static Future<void> saveCustomCategories(List<Map<String, dynamic>> cats) async {
+    await metaBox.put('custom_categories', jsonEncode(cats));
+  }
+
+  // --- META: Custom Banks ---
+
+  static List<Map<String, dynamic>> getCustomBanks() {
+    final json = metaBox.get('custom_banks', defaultValue: '[]')!;
+    return List<Map<String, dynamic>>.from(jsonDecode(json) as List);
+  }
+
+  static Future<void> saveCustomBanks(List<Map<String, dynamic>> banks) async {
+    await metaBox.put('custom_banks', jsonEncode(banks));
+  }
 
   // --- SETTINGS ---
 

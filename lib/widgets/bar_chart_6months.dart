@@ -18,6 +18,7 @@ class BarChart6Months extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final maxVal = [...expenses, ...incomes].fold(0.0, (a, b) => a > b ? a : b);
+    final gridColor = context.kCardBorder;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -52,7 +53,7 @@ class BarChart6Months extends StatelessWidget {
                     showTitles: true,
                     getTitlesWidget: (v, _) => Text(
                       formatMonthShort(months[v.toInt()]),
-                      style: const TextStyle(color: AppColors.textSecondary, fontSize: 10),
+                      style: TextStyle(color: context.kTextSecondary, fontSize: 10),
                     ),
                   ),
                 ),
@@ -60,7 +61,7 @@ class BarChart6Months extends StatelessWidget {
               borderData: FlBorderData(show: false),
               gridData: FlGridData(
                 show: true,
-                getDrawingHorizontalLine: (_) => const FlLine(color: AppColors.cardBorder, strokeWidth: 1),
+                getDrawingHorizontalLine: (_) => FlLine(color: gridColor, strokeWidth: 1),
                 drawVerticalLine: false,
               ),
             ),
@@ -81,7 +82,7 @@ class _LegendDot extends StatelessWidget {
         children: [
           Container(width: 10, height: 10, decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(2))),
           const SizedBox(width: 4),
-          Text(label, style: const TextStyle(color: AppColors.textSecondary, fontSize: 12)),
+          Text(label, style: TextStyle(color: context.kTextSecondary, fontSize: 12)),
         ],
       );
 }

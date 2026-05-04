@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../services/database_service.dart';
 
 class Category {
   final String id;
@@ -85,18 +86,40 @@ void loadCategoriesFromJson(List<dynamic> jsonCategories) {
   }
 }
 
-/// Retorna todas as categorias disponíveis (dinâmicas + padrão sem duplicatas)
+/// Retorna todas as categorias disponíveis (padrão → dinâmicas → custom do usuário)
 List<Category> getAllCategories() {
   final result = <String, Category>{};
   for (final c in kDefaultCategories) {
     result[c.id] = c;
   }
-  // Dinâmicas sobrescrevem padrão (prioridade)
+  // Importadas via JSON
   result.addAll(_dynamicCategories);
+  // Custom do usuário (maior prioridade — pode sobrescrever cor de existentes)
+  for (final c in DatabaseService.getCustomCategories()) {
+    final id = c['id'] as String;
+    final name = c['name'] as String;
+    final colorHex = (c['color'] as String?) ?? '#546E7A';
+    final emoji = (c['icon'] as String?) ?? '';
+    result[id] = Category(
+      id: id,
+      name: name,
+      color: _hexToColor(colorHex),
+      icon: _iconForCategory(name, emoji),
+    );
+  }
   return result.values.toList();
 }
 
 Category getCategoryById(String id) {
+  // Check custom categories first (highest priority)
+  final custom = DatabaseService.getCustomCategories();
+  final customMatch = custom.where((c) => c['id'] == id).toList();
+  if (customMatch.isNotEmpty) {
+    final c = customMatch.first;
+    final colorHex = (c['color'] as String?) ?? '#546E7A';
+    final emoji = (c['icon'] as String?) ?? '';
+    return Category(id: id, name: c['name'] as String, color: _hexToColor(colorHex), icon: _iconForCategory(c['name'] as String, emoji));
+  }
   if (_dynamicCategories.containsKey(id)) return _dynamicCategories[id]!;
   try {
     return kDefaultCategories.firstWhere((c) => c.id == id);

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+final themeNotifier = ValueNotifier<ThemeMode>(ThemeMode.dark);
+
 class AppColors {
   static const background = Color(0xFF0A0A14);
   static const card = Color(0xFF0F0F1E);
@@ -127,15 +129,102 @@ final darkTheme = ThemeData(
   ),
 );
 
+extension AppThemeX on BuildContext {
+  bool get isDark => Theme.of(this).brightness == Brightness.dark;
+  Color get kBg => isDark ? AppColors.background : const Color(0xFFF0F0F8);
+  Color get kCard => isDark ? AppColors.card : Colors.white;
+  Color get kCardBorder => isDark ? AppColors.cardBorder : const Color(0xFFE0E0EE);
+  Color get kTextPrimary => isDark ? AppColors.textPrimary : const Color(0xFF1A1A2E);
+  Color get kTextSecondary => isDark ? AppColors.textSecondary : const Color(0xFF606080);
+}
+
 final lightTheme = ThemeData(
   useMaterial3: true,
   brightness: Brightness.light,
-  scaffoldBackgroundColor: const Color(0xFFF5F5F5),
+  scaffoldBackgroundColor: const Color(0xFFF0F0F8),
   colorScheme: const ColorScheme.light(
     primary: AppColors.accent,
     secondary: Color(0xFF4CAF50),
     surface: Colors.white,
     error: AppColors.expense,
+    onPrimary: Colors.white,
+    onSurface: Color(0xFF1A1A2E),
   ),
   fontFamily: 'SpaceGrotesk',
+  appBarTheme: const AppBarTheme(
+    backgroundColor: Colors.white,
+    foregroundColor: Color(0xFF1A1A2E),
+    elevation: 0,
+    centerTitle: false,
+    titleTextStyle: TextStyle(
+      color: Color(0xFF1A1A2E),
+      fontSize: 20,
+      fontWeight: FontWeight.bold,
+      fontFamily: 'SpaceGrotesk',
+    ),
+  ),
+  bottomNavigationBarTheme: const BottomNavigationBarThemeData(
+    backgroundColor: Colors.white,
+    selectedItemColor: AppColors.accent,
+    unselectedItemColor: Color(0xFF9090A8),
+    type: BottomNavigationBarType.fixed,
+    elevation: 0,
+  ),
+  cardTheme: CardThemeData(
+    color: Colors.white,
+    elevation: 0,
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(16),
+      side: const BorderSide(color: Color(0xFFE0E0EE), width: 1),
+    ),
+  ),
+  elevatedButtonTheme: ElevatedButtonThemeData(
+    style: ElevatedButton.styleFrom(
+      backgroundColor: AppColors.accent,
+      foregroundColor: Colors.white,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+      textStyle: const TextStyle(fontFamily: 'SpaceGrotesk', fontWeight: FontWeight.w600, fontSize: 15),
+    ),
+  ),
+  floatingActionButtonTheme: const FloatingActionButtonThemeData(
+    backgroundColor: AppColors.accent,
+    foregroundColor: Colors.white,
+    shape: CircleBorder(),
+  ),
+  inputDecorationTheme: InputDecorationTheme(
+    filled: true,
+    fillColor: const Color(0xFFE8E8F0),
+    border: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(12),
+      borderSide: const BorderSide(color: Color(0xFFE0E0EE)),
+    ),
+    enabledBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(12),
+      borderSide: const BorderSide(color: Color(0xFFE0E0EE)),
+    ),
+    focusedBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(12),
+      borderSide: const BorderSide(color: AppColors.accent, width: 1.5),
+    ),
+    labelStyle: const TextStyle(color: Color(0xFF606080)),
+    hintStyle: const TextStyle(color: Color(0xFF606080)),
+  ),
+  dividerTheme: const DividerThemeData(color: Color(0xFFE0E0EE), thickness: 1),
+  switchTheme: SwitchThemeData(
+    thumbColor: WidgetStateProperty.resolveWith((s) => s.contains(WidgetState.selected) ? AppColors.accent : const Color(0xFF9090A8)),
+    trackColor: WidgetStateProperty.resolveWith((s) => s.contains(WidgetState.selected) ? AppColors.accent.withValues(alpha: 0.3) : const Color(0xFFE0E0EE)),
+  ),
+  textTheme: const TextTheme(
+    displayLarge: TextStyle(color: Color(0xFF1A1A2E), fontFamily: 'SpaceGrotesk', fontWeight: FontWeight.bold),
+    displayMedium: TextStyle(color: Color(0xFF1A1A2E), fontFamily: 'SpaceGrotesk', fontWeight: FontWeight.bold),
+    headlineLarge: TextStyle(color: Color(0xFF1A1A2E), fontFamily: 'SpaceGrotesk', fontWeight: FontWeight.bold),
+    headlineMedium: TextStyle(color: Color(0xFF1A1A2E), fontFamily: 'SpaceGrotesk', fontWeight: FontWeight.w600),
+    headlineSmall: TextStyle(color: Color(0xFF1A1A2E), fontFamily: 'SpaceGrotesk', fontWeight: FontWeight.w600),
+    titleLarge: TextStyle(color: Color(0xFF1A1A2E), fontFamily: 'SpaceGrotesk', fontWeight: FontWeight.w600),
+    titleMedium: TextStyle(color: Color(0xFF1A1A2E), fontFamily: 'SpaceGrotesk'),
+    bodyLarge: TextStyle(color: Color(0xFF1A1A2E), fontFamily: 'SpaceGrotesk'),
+    bodyMedium: TextStyle(color: Color(0xFF606080), fontFamily: 'SpaceGrotesk'),
+    labelLarge: TextStyle(color: Color(0xFF1A1A2E), fontFamily: 'SpaceGrotesk', fontWeight: FontWeight.w600),
+  ),
 );

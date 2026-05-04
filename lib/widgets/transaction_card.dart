@@ -23,64 +23,96 @@ class TransactionCard extends StatelessWidget {
     final t = occurrence.transaction;
     final cat = getCategoryById(t.categoryId);
 
-    return Container(
-      margin: const EdgeInsets.symmetric(vertical: 4),
-      decoration: BoxDecoration(
-        color: AppColors.card,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.cardBorder),
-      ),
-      child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        leading: Container(
-          width: 40,
-          height: 40,
-          decoration: BoxDecoration(
-            color: cat.color.withValues(alpha: 0.15),
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: Icon(cat.icon, color: cat.color, size: 20),
+    return InkWell(
+      onTap: onEdit,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        margin: const EdgeInsets.symmetric(vertical: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: context.kCard,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: context.kCardBorder),
         ),
-        title: Text(
-          t.description,
-          style: const TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600, fontSize: 14),
-        ),
-        subtitle: Row(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            _Badge(label: cat.name, color: cat.color),
-            const SizedBox(width: 6),
-            _Badge(label: groupLabel(t.groupId), color: AppColors.accent),
-            if (t.groupId == 'parcelamento') ...[
-              const SizedBox(width: 4),
-              Text(
-                '${occurrence.installmentIndex}/${occurrence.installmentTotal}',
-                style: const TextStyle(color: AppColors.textSecondary, fontSize: 10),
+            // Ícone da categoria
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: cat.color.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(10),
               ),
-            ],
-          ],
-        ),
-        trailing: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              formatCurrency(occurrence.amount, currency: currency),
-              style: const TextStyle(
-                color: AppColors.expense,
-                fontWeight: FontWeight.bold,
-                fontFamily: 'JetBrainsMono',
-                fontSize: 14,
+              child: Icon(cat.icon, color: cat.color, size: 20),
+            ),
+            const SizedBox(width: 12),
+
+            // Descrição + badges
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    t.description,
+                    style: TextStyle(
+                      color: context.kTextPrimary,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 14,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 1,
+                  ),
+                  const SizedBox(height: 4),
+                  Wrap(
+                    spacing: 4,
+                    runSpacing: 4,
+                    children: [
+                      _Badge(label: cat.name, color: cat.color),
+                      _Badge(label: groupLabel(t.groupId), color: AppColors.accent),
+                      if (t.groupId == 'parcelamento')
+                        _Badge(
+                          label: '${occurrence.installmentIndex}/${occurrence.installmentTotal}',
+                          color: context.kTextSecondary,
+                        ),
+                      if (t.bankId != null)
+                        _Badge(label: bankLabel(t.bankId), color: AppColors.neonCyan),
+                    ],
+                  ),
+                ],
               ),
             ),
-            PopupMenuButton<String>(
-              icon: const Icon(Icons.more_vert, color: AppColors.textSecondary, size: 18),
-              color: AppColors.card,
-              onSelected: (v) {
-                if (v == 'edit') onEdit?.call();
-                if (v == 'delete') onDelete?.call();
-              },
-              itemBuilder: (_) => [
-                const PopupMenuItem(value: 'edit', child: Text('Editar', style: TextStyle(color: AppColors.textPrimary))),
-                const PopupMenuItem(value: 'delete', child: Text('Excluir', style: TextStyle(color: AppColors.expense))),
+            const SizedBox(width: 8),
+
+            // Valor + menu
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
+                  formatCurrency(occurrence.amount, currency: currency),
+                  style: const TextStyle(
+                    color: AppColors.expense,
+                    fontWeight: FontWeight.bold,
+                    fontFamily: 'JetBrainsMono',
+                    fontSize: 13,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                PopupMenuButton<String>(
+                  padding: EdgeInsets.zero,
+                  iconSize: 18,
+                  icon: Icon(Icons.more_vert, color: context.kTextSecondary, size: 18),
+                  color: context.kCard,
+                  onSelected: (v) {
+                    if (v == 'edit') onEdit?.call();
+                    if (v == 'delete') onDelete?.call();
+                  },
+                  itemBuilder: (_) => [
+                    PopupMenuItem(value: 'edit', child: Text('Editar', style: TextStyle(color: context.kTextPrimary))),
+                    const PopupMenuItem(value: 'delete', child: Text('Excluir', style: TextStyle(color: AppColors.expense))),
+                  ],
+                ),
               ],
             ),
           ],
@@ -102,6 +134,9 @@ class _Badge extends StatelessWidget {
           color: color.withValues(alpha: 0.15),
           borderRadius: BorderRadius.circular(6),
         ),
-        child: Text(label, style: TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.w600)),
+        child: Text(
+          label,
+          style: TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.w600),
+        ),
       );
 }

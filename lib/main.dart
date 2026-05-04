@@ -5,7 +5,9 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'models/transaction.dart';
 import 'models/income.dart';
 import 'models/app_settings.dart';
+import 'services/database_service.dart';
 import 'services/seed_service.dart';
+import 'theme/app_theme.dart';
 import 'app.dart';
 
 void main() async {
@@ -24,10 +26,15 @@ void main() async {
     Hive.openBox<Transaction>('transactions'),
     Hive.openBox<Income>('incomes'),
     Hive.openBox<AppSettings>('settings'),
+    Hive.openBox<String>('meta'),
   ]);
 
   // Carrega categorias dinâmicas e semeia dados na primeira abertura
   await SeedService.seedIfEmpty();
 
-  runApp(const ProviderScope(child: FarmasApp()));
+  // Lê tema salvo e inicializa o notifier
+  final settings = DatabaseService.getSettings();
+  themeNotifier.value = settings.theme == 'light' ? ThemeMode.light : ThemeMode.dark;
+
+  runApp(const ProviderScope(child: KontaApp()));
 }

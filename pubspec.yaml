@@ -1,5 +1,5 @@
-name: farmas_mobile
-description: Controle financeiro pessoal e familiar.
+name: konta
+description: "Konta — Controle financeiro pessoal e familiar."
 publish_to: 'none'
 version: 1.0.0+1
 
@@ -53,6 +53,13 @@ dev_dependencies:
   hive_generator: ^2.0.1
   build_runner: ^2.4.12
   flutter_lints: ^5.0.0
+  flutter_launcher_icons: ^0.14.1
+
+flutter_launcher_icons:
+  android: true
+  ios: false
+  image_path: "assets/icons/icon_konta.png"
+  min_sdk_android: 21
 
 flutter:
   uses-material-design: true

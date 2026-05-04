@@ -35,16 +35,21 @@ class MonthSummary {
 }
 
 class FinanceCalculator {
-  // Porta fiel da lógica getOccurrencesForMonth do Farmas web
+  // Porta fiel da lógica getOccurrencesForMonth do Farmas web.
+  // [familyOnly]: quando true, retorna apenas lançamentos marcados como familyMode=true
   static List<TransactionOccurrence> getOccurrencesForMonth(
     List<Transaction> transactions,
     DateTime yearMonth,
-    int familyCount,
-  ) {
+    int familyCount, {
+    bool familyOnly = false,
+  }) {
     final result = <TransactionOccurrence>[];
     final divisor = familyCount > 1 ? familyCount.toDouble() : 1.0;
 
     for (final t in transactions) {
+      // Modo família: se familyOnly=true, ignora transações não-família
+      if (familyOnly && !t.familyMode) continue;
+
       switch (t.groupId) {
         case 'avista':
           if (isSameMonth(t.startDate, yearMonth)) {
@@ -94,9 +99,10 @@ class FinanceCalculator {
     List<Transaction> transactions,
     List<Income> incomes,
     DateTime yearMonth,
-    int familyCount,
-  ) {
-    final occurrences = getOccurrencesForMonth(transactions, yearMonth, familyCount);
+    int familyCount, {
+    bool familyOnly = false,
+  }) {
+    final occurrences = getOccurrencesForMonth(transactions, yearMonth, familyCount, familyOnly: familyOnly);
     final totalExpenses = occurrences.fold(0.0, (s, o) => s + o.amount);
     final totalIncome = getIncomeForMonth(incomes, yearMonth);
 
@@ -119,6 +125,19 @@ class FinanceCalculator {
       byGroup: byGroup,
       byBank: byBank,
     );
+  }
+
+  /// Calcula o total BRUTO da família: restaura o divisor para obter o valor real
+  /// (mesmo cálculo que totalExpensesAll no web)
+  static double getGrossFamilyExpenses(
+    List<Transaction> transactions,
+    DateTime yearMonth,
+    int familyCount,
+  ) {
+    // Pega ocorrências sem divisão (familyCount=1) e sem filtro
+    final raw = getOccurrencesForMonth(transactions, yearMonth, 1);
+    // O amount já está sem divisão; apenas some tudo
+    return raw.fold(0.0, (s, o) => s + o.amount);
   }
 
   // Últimos N meses a partir de uma data base

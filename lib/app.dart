@@ -7,18 +7,21 @@ import 'screens/history_screen.dart';
 import 'screens/settings_screen.dart';
 import 'theme/app_theme.dart';
 
-class FarmasApp extends StatelessWidget {
-  const FarmasApp({super.key});
+class KontaApp extends StatelessWidget {
+  const KontaApp({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp.router(
-      title: 'Farmas',
-      debugShowCheckedModeBanner: false,
-      theme: lightTheme,
-      darkTheme: darkTheme,
-      themeMode: ThemeMode.dark,
-      routerConfig: _router,
+    return ValueListenableBuilder<ThemeMode>(
+      valueListenable: themeNotifier,
+      builder: (_, mode, __) => MaterialApp.router(
+        title: 'Konta',
+        debugShowCheckedModeBanner: false,
+        theme: lightTheme,
+        darkTheme: darkTheme,
+        themeMode: mode,
+        routerConfig: _router,
+      ),
     );
   }
 }
@@ -62,8 +65,8 @@ class _ShellState extends State<_Shell> {
     return Scaffold(
       body: widget.child,
       bottomNavigationBar: Container(
-        decoration: const BoxDecoration(
-          border: Border(top: BorderSide(color: AppColors.cardBorder, width: 1)),
+        decoration: BoxDecoration(
+          border: Border(top: BorderSide(color: context.kCardBorder, width: 1)),
         ),
         child: BottomNavigationBar(
           currentIndex: _currentIndex,
@@ -76,12 +79,7 @@ class _ShellState extends State<_Shell> {
           ],
         ),
       ),
-      floatingActionButton: FloatingActionButton.small(
-        heroTag: 'settings_fab',
-        onPressed: () => context.push('/settings'),
-        backgroundColor: AppColors.cardBorder,
-        child: const Icon(Icons.settings_outlined, color: AppColors.textSecondary, size: 18),
-      ),
+      floatingActionButton: null,
       floatingActionButtonLocation: FloatingActionButtonLocation.endTop,
     );
   }
