@@ -182,7 +182,7 @@ class _AddTransactionFormState extends State<AddTransactionForm> {
                 dropdownColor: AppColors.card,
                 style: const TextStyle(color: AppColors.textPrimary),
                 decoration: const InputDecoration(),
-                items: kCategories.map((c) => DropdownMenuItem(
+                items: getAllCategories().map((c) => DropdownMenuItem(
                   value: c.id,
                   child: Row(children: [
                     Icon(c.icon, color: c.color, size: 18),

@@ -5,6 +5,7 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'models/transaction.dart';
 import 'models/income.dart';
 import 'models/app_settings.dart';
+import 'services/seed_service.dart';
 import 'app.dart';
 
 void main() async {
@@ -24,6 +25,9 @@ void main() async {
     Hive.openBox<Income>('incomes'),
     Hive.openBox<AppSettings>('settings'),
   ]);
+
+  // Carrega categorias dinâmicas e semeia dados na primeira abertura
+  await SeedService.seedIfEmpty();
 
   runApp(const ProviderScope(child: FarmasApp()));
 }
