@@ -45,6 +45,9 @@ dependencies:
   # Path de pastas do sistema
   path_provider: ^2.1.5
 
+  # Fuso horário para notificações agendadas
+  timezone: ^0.9.4
+
   cupertino_icons: ^1.0.8
 
 dev_dependencies:

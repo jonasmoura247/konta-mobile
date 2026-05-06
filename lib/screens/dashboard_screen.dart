@@ -9,6 +9,7 @@ import '../utils/formatters.dart';
 import '../widgets/summary_card.dart';
 import '../widgets/charts_carousel.dart';
 import '../widgets/bar_chart_6months.dart';
+import '../widgets/annual_control_section.dart';
 import '../widgets/month_picker_button.dart';
 import '../widgets/add_transaction_form.dart';
 import '../widgets/add_income_form.dart';
@@ -34,11 +35,25 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   late List<double> _last6Incomes;
   late List<double> _last6Debits;
 
+  late YearSummary _yearSummary;
+  YearComparison? _yearComparison;
+  List<int> _yearsWithData = [];
+  int _compareYear = DateTime.now().year - 1;
+
   @override
   void initState() {
     super.initState();
+    DatabaseService.dataVersion.addListener(_onDataChanged);
     _recalculate();
   }
+
+  @override
+  void dispose() {
+    DatabaseService.dataVersion.removeListener(_onDataChanged);
+    super.dispose();
+  }
+
+  void _onDataChanged() => setState(_recalculate);
 
   void _recalculate() {
     final settings = DatabaseService.getSettings();
@@ -46,13 +61,33 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     final incomes = DatabaseService.getAllIncomes();
     final familyCount = settings.familyMode ? settings.familyCount : 1;
 
+    final carryover = settings.carryoverMode
+        ? FinanceCalculator.getCarryover(transactions, incomes, _activeMonth, familyCount)
+        : 0.0;
+
     // Visão ativa: normal = todos, família = só familyMode=true
     _summary = FinanceCalculator.summarize(
       transactions, incomes, _activeMonth, familyCount,
       familyOnly: _familyView,
+      carryover: carryover,
     );
 
-    _last6Months = FinanceCalculator.lastNMonths(_activeMonth, 6);
+    final year = DateTime.now().year;
+
+    // Controle anual
+    _yearsWithData = FinanceCalculator.getYearsWithData(transactions, incomes);
+    _yearSummary = FinanceCalculator.summarizeYear(
+      transactions, incomes, year, familyCount,
+      familyOnly: _familyView,
+    );
+    _yearComparison = _yearsWithData.contains(_compareYear) && _compareYear < year
+        ? FinanceCalculator.compareYears(
+            transactions, incomes, year, _compareYear, familyCount,
+            familyOnly: _familyView,
+          )
+        : null;
+
+    _last6Months = List.generate(12, (i) => DateTime(year, i + 1));
     _last6Expenses = _last6Months.map((m) {
       return FinanceCalculator.summarize(transactions, incomes, m, familyCount, familyOnly: _familyView).totalExpenses;
     }).toList();
@@ -157,7 +192,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 
     return Scaffold(
       body: SafeArea(
-        child: CustomScrollView(
+        child: RefreshIndicator(
+          onRefresh: () async => setState(_recalculate),
+          child: CustomScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
           slivers: [
             SliverToBoxAdapter(
               child: Padding(
@@ -307,6 +345,33 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                         icon: _summary.balance >= 0 ? Icons.account_balance_wallet : Icons.warning_amber,
                         currency: currency,
                       ),
+                      if (_summary.carryover != 0.0) ...[
+                        const SizedBox(height: 6),
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: (_summary.carryover >= 0 ? AppColors.income : AppColors.expense).withValues(alpha: 0.08),
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: (_summary.carryover >= 0 ? AppColors.income : AppColors.expense).withValues(alpha: 0.25)),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(Icons.history, color: _summary.carryover >= 0 ? AppColors.income : AppColors.expense, size: 14),
+                              const SizedBox(width: 6),
+                              Text(
+                                _summary.carryover >= 0
+                                    ? '↑ inclui ${formatCurrency(_summary.carryover, currency: currency)} acumulado de meses anteriores'
+                                    : '↓ déficit de ${formatCurrency(_summary.carryover.abs(), currency: currency)} de meses anteriores',
+                                style: TextStyle(
+                                  color: _summary.carryover >= 0 ? AppColors.income : AppColors.expense,
+                                  fontSize: 11,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ],
 
                     // ── Cartões Vista Família ─────────────────────────────────
@@ -356,13 +421,29 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     ChartsCarousel(summary: _summary, currency: currency),
                     const SizedBox(height: 24),
 
-                    // ── Gráfico 6 meses ──────────────────────────────────────
-                    Text('Histórico 6 meses', style: TextStyle(color: context.kTextPrimary, fontSize: 15, fontWeight: FontWeight.bold)),
+                    // ── Gráfico anual ─────────────────────────────────────────
+                    Text('Histórico ${DateTime.now().year}', style: TextStyle(color: context.kTextPrimary, fontSize: 15, fontWeight: FontWeight.bold)),
                     const SizedBox(height: 12),
                     Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(color: context.kCard, borderRadius: BorderRadius.circular(16), border: Border.all(color: context.kCardBorder)),
-                      child: BarChart6Months(months: _last6Months, expenses: _last6Expenses, incomes: _last6Incomes, debits: _last6Debits),
+                      child: BarChart6Months(months: _last6Months, expenses: _last6Expenses, incomes: _last6Incomes, debits: _last6Debits, currency: currency),
+                    ),
+                    const SizedBox(height: 24),
+
+                    // ── Controle anual ────────────────────────────────────────
+                    AnnualControlSection(
+                      yearSummary: _yearSummary,
+                      yearComparison: _yearComparison,
+                      compareYear: _compareYear,
+                      availableCompareYears: _yearsWithData
+                          .where((y) => y < DateTime.now().year)
+                          .toList(),
+                      onCompareYearChanged: (y) => setState(() {
+                        _compareYear = y;
+                        _recalculate();
+                      }),
+                      currency: currency,
                     ),
                     const SizedBox(height: 80),
                   ],
@@ -370,6 +451,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               ),
             ),
           ],
+          ),
         ),
       ),
       floatingActionButton: FloatingActionButton(

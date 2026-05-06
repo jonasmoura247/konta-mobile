@@ -20,6 +20,7 @@ class MonthSummary {
   final double totalExpenses;
   final double totalIncome;
   final double totalDebit;
+  final double carryover;
   final double balance;
   final Map<String, double> byCategory;
   final Map<String, double> byGroup;
@@ -35,6 +36,59 @@ class MonthSummary {
     required this.byGroup,
     required this.byBank,
     required this.byDebitCategory,
+    this.carryover = 0.0,
+  });
+}
+
+class YearSummary {
+  final int year;
+  final int untilMonth;
+  final List<DateTime> months;
+  final List<MonthSummary> monthSummaries;
+  final double totalIncome;
+  final double totalExpenses;
+  final double totalDebit;
+  final double totalOutflow;
+  final double annualBalance;
+  final double monthlyAverage;
+  final DateTime? bestMonth;
+  final DateTime? worstMonth;
+
+  const YearSummary({
+    required this.year,
+    required this.untilMonth,
+    required this.months,
+    required this.monthSummaries,
+    required this.totalIncome,
+    required this.totalExpenses,
+    required this.totalDebit,
+    required this.totalOutflow,
+    required this.annualBalance,
+    required this.monthlyAverage,
+    this.bestMonth,
+    this.worstMonth,
+  });
+}
+
+class YearComparison {
+  final YearSummary current;
+  final YearSummary previous;
+  final double incomeDiff;
+  final double outflowDiff;
+  final double balanceDiff;
+  final double incomePercent;
+  final double outflowPercent;
+  final double balancePercent;
+
+  const YearComparison({
+    required this.current,
+    required this.previous,
+    required this.incomeDiff,
+    required this.outflowDiff,
+    required this.balanceDiff,
+    required this.incomePercent,
+    required this.outflowPercent,
+    required this.balancePercent,
   });
 }
 
@@ -126,6 +180,7 @@ class FinanceCalculator {
     DateTime yearMonth,
     int familyCount, {
     bool familyOnly = false,
+    double carryover = 0.0,
   }) {
     final occurrences = getOccurrencesForMonth(transactions, yearMonth, familyCount, familyOnly: familyOnly);
     final totalExpenses = occurrences.fold(0.0, (s, o) => s + o.amount);
@@ -154,7 +209,8 @@ class FinanceCalculator {
       totalExpenses: totalExpenses,
       totalIncome: totalIncome,
       totalDebit: totalDebit,
-      balance: totalIncome - totalExpenses - totalDebit,
+      carryover: carryover,
+      balance: totalIncome + carryover - totalExpenses - totalDebit,
       byCategory: byCategory,
       byGroup: byGroup,
       byBank: byBank,
@@ -180,5 +236,148 @@ class FinanceCalculator {
       while (month <= 0) { month += 12; year--; }
       return DateTime(year, month);
     });
+  }
+
+  /// Retorna todos os meses que têm pelo menos 1 transação ou entrada, ordenados.
+  static List<DateTime> getMonthsWithData(
+    List<Transaction> transactions,
+    List<Income> incomes,
+  ) {
+    final months = <DateTime>{};
+    for (final t in transactions) {
+      months.add(DateTime(t.startDate.year, t.startDate.month));
+    }
+    for (final i in incomes) {
+      months.add(DateTime(i.date.year, i.date.month));
+    }
+    final list = months.toList()..sort();
+    return list;
+  }
+
+  static YearSummary summarizeYear(
+    List<Transaction> transactions,
+    List<Income> incomes,
+    int year,
+    int familyCount, {
+    int? untilMonth,
+    bool familyOnly = false,
+  }) {
+    final now = DateTime.now();
+    final lastMonth = (untilMonth ?? (year == now.year ? now.month : 12)).clamp(1, 12);
+
+    final months = List.generate(12, (i) => DateTime(year, i + 1));
+    final summaries = months
+        .map((m) => summarize(transactions, incomes, m, familyCount, familyOnly: familyOnly))
+        .toList();
+
+    double totalIncome = 0;
+    double totalExpenses = 0;
+    double totalDebit = 0;
+
+    for (int i = 0; i < lastMonth; i++) {
+      totalIncome += summaries[i].totalIncome;
+      totalExpenses += summaries[i].totalExpenses;
+      totalDebit += summaries[i].totalDebit;
+    }
+
+    final totalOutflow = totalExpenses + totalDebit;
+    final annualBalance = totalIncome - totalOutflow;
+    final monthlyAverage = lastMonth > 0 ? annualBalance / lastMonth : 0.0;
+
+    DateTime? bestMonth;
+    DateTime? worstMonth;
+    double? bestBalance;
+    double? worstBalance;
+
+    for (int i = 0; i < lastMonth; i++) {
+      final s = summaries[i];
+      final hasData = s.totalIncome > 0 || s.totalExpenses > 0 || s.totalDebit > 0;
+      if (!hasData) continue;
+      final b = s.totalIncome - s.totalExpenses - s.totalDebit;
+      if (bestBalance == null || b > bestBalance) {
+        bestBalance = b;
+        bestMonth = months[i];
+      }
+      if (worstBalance == null || b < worstBalance) {
+        worstBalance = b;
+        worstMonth = months[i];
+      }
+    }
+
+    return YearSummary(
+      year: year,
+      untilMonth: lastMonth,
+      months: months,
+      monthSummaries: summaries,
+      totalIncome: totalIncome,
+      totalExpenses: totalExpenses,
+      totalDebit: totalDebit,
+      totalOutflow: totalOutflow,
+      annualBalance: annualBalance,
+      monthlyAverage: monthlyAverage,
+      bestMonth: bestMonth,
+      worstMonth: worstMonth,
+    );
+  }
+
+  static YearComparison compareYears(
+    List<Transaction> transactions,
+    List<Income> incomes,
+    int currentYear,
+    int previousYear,
+    int familyCount, {
+    int? untilMonth,
+    bool familyOnly = false,
+  }) {
+    final current = summarizeYear(
+      transactions, incomes, currentYear, familyCount,
+      untilMonth: untilMonth, familyOnly: familyOnly,
+    );
+    final previous = summarizeYear(
+      transactions, incomes, previousYear, familyCount,
+      untilMonth: current.untilMonth, familyOnly: familyOnly,
+    );
+
+    double safePct(double a, double b) => b == 0 ? 0 : ((a - b) / b) * 100;
+
+    return YearComparison(
+      current: current,
+      previous: previous,
+      incomeDiff: current.totalIncome - previous.totalIncome,
+      outflowDiff: current.totalOutflow - previous.totalOutflow,
+      balanceDiff: current.annualBalance - previous.annualBalance,
+      incomePercent: safePct(current.totalIncome, previous.totalIncome),
+      outflowPercent: safePct(current.totalOutflow, previous.totalOutflow),
+      balancePercent: safePct(current.annualBalance, previous.annualBalance),
+    );
+  }
+
+  static List<int> getYearsWithData(
+    List<Transaction> transactions,
+    List<Income> incomes,
+  ) {
+    final years = <int>{};
+    for (final t in transactions) { years.add(t.startDate.year); }
+    for (final i in incomes) { years.add(i.date.year); }
+    return years.toList()..sort();
+  }
+
+  /// Calcula o saldo acumulado de meses anteriores ao mês alvo.
+  static double getCarryover(
+    List<Transaction> transactions,
+    List<Income> incomes,
+    DateTime targetMonth,
+    int familyCount,
+  ) {
+    final allMonths = getMonthsWithData(transactions, incomes);
+    final target = DateTime(targetMonth.year, targetMonth.month);
+    final prevMonths = allMonths.where((m) => m.isBefore(target)).toList();
+
+    double accumulated = 0.0;
+    for (final month in prevMonths) {
+      final s = summarize(transactions, incomes, month, familyCount);
+      accumulated = s.totalIncome + accumulated - s.totalExpenses - s.totalDebit;
+    }
+    return accumulated;
   }
 }

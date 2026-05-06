@@ -19,11 +19,19 @@ class AppSettings extends HiveObject {
   @HiveField(4)
   late List<String> familyNames;
 
+  @HiveField(5)
+  late bool carryoverMode;
+
+  @HiveField(6)
+  late bool goalsEnabled;
+
   AppSettings({
     this.currency = 'BRL',
     this.theme = 'dark',
     this.familyMode = false,
     this.familyCount = 2,
     List<String>? familyNames,
+    this.carryoverMode = false,
+    this.goalsEnabled = false,
   }) : familyNames = familyNames ?? ['Eu', 'Parceiro(a)'];
 }

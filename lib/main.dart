@@ -5,7 +5,12 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'models/transaction.dart';
 import 'models/income.dart';
 import 'models/app_settings.dart';
+import 'models/reserve.dart';
+import 'models/reserve_snapshot.dart';
+import 'models/reminder.dart';
+import 'models/goal.dart';
 import 'services/database_service.dart';
+import 'services/notification_service.dart';
 import 'services/seed_service.dart';
 import 'theme/app_theme.dart';
 import 'app.dart';
@@ -13,26 +18,31 @@ import 'app.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Formatação de datas em pt-BR
   await initializeDateFormatting('pt_BR', null);
 
-  // Inicializar banco de dados Hive
   await Hive.initFlutter();
   Hive.registerAdapter(TransactionAdapter());
   Hive.registerAdapter(IncomeAdapter());
   Hive.registerAdapter(AppSettingsAdapter());
+  Hive.registerAdapter(ReserveAdapter());
+  Hive.registerAdapter(ReserveSnapshotAdapter());
+  Hive.registerAdapter(ReminderAdapter());
+  Hive.registerAdapter(GoalAdapter());
 
   await Future.wait([
     Hive.openBox<Transaction>('transactions'),
     Hive.openBox<Income>('incomes'),
     Hive.openBox<AppSettings>('settings'),
     Hive.openBox<String>('meta'),
+    Hive.openBox<Reserve>('reserves'),
+    Hive.openBox<ReserveSnapshot>('reserve_snapshots'),
+    Hive.openBox<Reminder>('reminders'),
+    Hive.openBox<Goal>('goals'),
   ]);
 
-  // Carrega categorias dinâmicas e semeia dados na primeira abertura
   await SeedService.seedIfEmpty();
+  await NotificationService.init();
 
-  // Lê tema salvo e inicializa o notifier
   final settings = DatabaseService.getSettings();
   themeNotifier.value = settings.theme == 'light' ? ThemeMode.light : ThemeMode.dark;
 

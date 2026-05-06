@@ -3,27 +3,27 @@ import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 import '../utils/formatters.dart';
 
-class BarChart6Months extends StatefulWidget {
+class AnnualComparisonChart extends StatefulWidget {
   final List<DateTime> months;
-  final List<double> expenses;
   final List<double> incomes;
-  final List<double> debits;
+  final List<double> outflows;
   final String currency;
+  final int untilMonth;
 
-  const BarChart6Months({
+  const AnnualComparisonChart({
     super.key,
     required this.months,
-    required this.expenses,
     required this.incomes,
-    required this.debits,
-    this.currency = 'BRL',
+    required this.outflows,
+    required this.currency,
+    required this.untilMonth,
   });
 
   @override
-  State<BarChart6Months> createState() => _BarChart6MonthsState();
+  State<AnnualComparisonChart> createState() => _AnnualComparisonChartState();
 }
 
-class _BarChart6MonthsState extends State<BarChart6Months> {
+class _AnnualComparisonChartState extends State<AnnualComparisonChart> {
   late final ScrollController _scrollCtrl;
 
   @override
@@ -45,28 +45,19 @@ class _BarChart6MonthsState extends State<BarChart6Months> {
 
   @override
   Widget build(BuildContext context) {
-    final maxVal = [
-      ...widget.expenses,
-      ...widget.incomes,
-      ...widget.debits,
-    ].fold(0.0, (a, b) => a > b ? a : b);
-
-    final gridColor = context.kCardBorder;
+    final maxVal = [...widget.incomes, ...widget.outflows]
+        .fold(0.0, (a, b) => a > b ? a : b);
     final n = widget.months.length;
-    final currency = widget.currency;
-
-    const rodLabels = ['Cartão', 'Entradas', 'Débito'];
+    const rodLabels = ['Entradas', 'Saídas'];
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Row(
+        Row(
           children: [
-            _LegendDot(color: AppColors.expense, label: 'Cartão'),
-            SizedBox(width: 16),
             _LegendDot(color: AppColors.income, label: 'Entradas'),
-            SizedBox(width: 16),
-            _LegendDot(color: AppColors.neonCyan, label: 'Débito'),
+            const SizedBox(width: 16),
+            _LegendDot(color: AppColors.expense, label: 'Saídas'),
           ],
         ),
         const SizedBox(height: 12),
@@ -85,10 +76,12 @@ class _BarChart6MonthsState extends State<BarChart6Months> {
                       maxY: maxVal * 1.25 < 1 ? 1 : maxVal * 1.25,
                       barTouchData: BarTouchData(
                         touchTooltipData: BarTouchTooltipData(
-                          getTooltipColor: (_) => AppColors.card.withValues(alpha: 0.95),
+                          getTooltipColor: (_) =>
+                              AppColors.card.withValues(alpha: 0.95),
                           getTooltipItem: (group, groupIndex, rod, rodIndex) {
                             final label = rodLabels[rodIndex];
-                            final value = formatCurrency(rod.toY, currency: currency);
+                            final value = formatCurrency(rod.toY,
+                                currency: widget.currency);
                             return BarTooltipItem(
                               '$label\n$value',
                               const TextStyle(
@@ -100,44 +93,59 @@ class _BarChart6MonthsState extends State<BarChart6Months> {
                           },
                         ),
                       ),
-                      barGroups: List.generate(n, (i) => BarChartGroupData(
-                        x: i,
-                        barRods: [
-                          BarChartRodData(
-                            toY: widget.expenses[i],
-                            color: AppColors.expense,
-                            width: 8,
-                            borderRadius: const BorderRadius.vertical(top: Radius.circular(4)),
-                          ),
-                          BarChartRodData(
-                            toY: widget.incomes[i],
-                            color: AppColors.income,
-                            width: 8,
-                            borderRadius: const BorderRadius.vertical(top: Radius.circular(4)),
-                          ),
-                          BarChartRodData(
-                            toY: widget.debits[i],
-                            color: AppColors.neonCyan,
-                            width: 8,
-                            borderRadius: const BorderRadius.vertical(top: Radius.circular(4)),
-                          ),
-                        ],
-                        barsSpace: 3,
-                      )),
+                      barGroups: List.generate(n, (i) {
+                        final isFuture = i >= widget.untilMonth;
+                        return BarChartGroupData(
+                          x: i,
+                          barRods: [
+                            BarChartRodData(
+                              toY: widget.incomes[i],
+                              color: isFuture
+                                  ? AppColors.income.withValues(alpha: 0.2)
+                                  : AppColors.income,
+                              width: 10,
+                              borderRadius: const BorderRadius.vertical(
+                                  top: Radius.circular(4)),
+                            ),
+                            BarChartRodData(
+                              toY: widget.outflows[i],
+                              color: isFuture
+                                  ? AppColors.expense.withValues(alpha: 0.2)
+                                  : AppColors.expense,
+                              width: 10,
+                              borderRadius: const BorderRadius.vertical(
+                                  top: Radius.circular(4)),
+                            ),
+                          ],
+                          barsSpace: 3,
+                        );
+                      }),
                       titlesData: FlTitlesData(
-                        leftTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                        rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                        topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                        leftTitles: const AxisTitles(
+                            sideTitles: SideTitles(showTitles: false)),
+                        rightTitles: const AxisTitles(
+                            sideTitles: SideTitles(showTitles: false)),
+                        topTitles: const AxisTitles(
+                            sideTitles: SideTitles(showTitles: false)),
                         bottomTitles: AxisTitles(
                           sideTitles: SideTitles(
                             showTitles: true,
                             reservedSize: 20,
                             getTitlesWidget: (v, _) {
                               final i = v.toInt();
-                              if (i < 0 || i >= n) return const SizedBox.shrink();
+                              if (i < 0 || i >= n) {
+                                return const SizedBox.shrink();
+                              }
+                              final isFuture = i >= widget.untilMonth;
                               return Text(
                                 formatMonthAbbrev(widget.months[i]),
-                                style: TextStyle(color: context.kTextSecondary, fontSize: 10),
+                                style: TextStyle(
+                                  color: isFuture
+                                      ? context.kTextSecondary
+                                          .withValues(alpha: 0.4)
+                                      : context.kTextSecondary,
+                                  fontSize: 10,
+                                ),
                               );
                             },
                           ),
@@ -146,7 +154,8 @@ class _BarChart6MonthsState extends State<BarChart6Months> {
                       borderData: FlBorderData(show: false),
                       gridData: FlGridData(
                         show: true,
-                        getDrawingHorizontalLine: (_) => FlLine(color: gridColor, strokeWidth: 1),
+                        getDrawingHorizontalLine: (_) =>
+                            FlLine(color: context.kCardBorder, strokeWidth: 1),
                         drawVerticalLine: false,
                       ),
                     ),
@@ -161,7 +170,10 @@ class _BarChart6MonthsState extends State<BarChart6Months> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(Icons.chevron_left, size: 12, color: context.kTextSecondary),
-            Text(' arraste para ver todos os meses ', style: TextStyle(color: context.kTextSecondary, fontSize: 9)),
+            Text(
+              ' arraste para ver todos os meses ',
+              style: TextStyle(color: context.kTextSecondary, fontSize: 9),
+            ),
             Icon(Icons.chevron_right, size: 12, color: context.kTextSecondary),
           ],
         ),
@@ -178,9 +190,15 @@ class _LegendDot extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Row(
         children: [
-          Container(width: 10, height: 10, decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(2))),
+          Container(
+            width: 10,
+            height: 10,
+            decoration: BoxDecoration(
+                color: color, borderRadius: BorderRadius.circular(2)),
+          ),
           const SizedBox(width: 4),
-          Text(label, style: TextStyle(color: context.kTextSecondary, fontSize: 12)),
+          Text(label,
+              style: TextStyle(color: context.kTextSecondary, fontSize: 12)),
         ],
       );
 }

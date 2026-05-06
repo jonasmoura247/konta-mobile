@@ -1,18 +1,18 @@
 import 'package:flutter/material.dart';
-import '../models/category.dart';
+import '../models/reserve.dart';
 import '../theme/app_theme.dart';
 import '../utils/formatters.dart';
-import '../services/finance_calculator.dart';
+import '../widgets/reserve_donut_chart.dart';
 
-class TransactionCard extends StatelessWidget {
-  final TransactionOccurrence occurrence;
+class ReserveCard extends StatelessWidget {
+  final Reserve reserve;
   final String currency;
   final VoidCallback? onEdit;
   final VoidCallback? onDelete;
 
-  const TransactionCard({
+  const ReserveCard({
     super.key,
-    required this.occurrence,
+    required this.reserve,
     this.currency = 'BRL',
     this.onEdit,
     this.onDelete,
@@ -20,71 +20,68 @@ class TransactionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final t = occurrence.transaction;
-    final cat = getCategoryById(t.categoryId);
+    final color = reserveTypeColor(reserve.type);
+    final emoji = reserveTypeEmoji(reserve.type);
+    final label = reserveTypeLabel(reserve.type);
 
     return InkWell(
       onTap: onEdit,
       borderRadius: BorderRadius.circular(12),
       child: Container(
         margin: const EdgeInsets.symmetric(vertical: 4),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
           color: context.kCard,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: context.kCardBorder),
+          border: Border.all(color: color.withValues(alpha: 0.25)),
         ),
         child: Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            // Ícone da categoria
+            // Ícone
             Container(
-              width: 40,
-              height: 40,
+              width: 42,
+              height: 42,
               decoration: BoxDecoration(
-                color: cat.color.withValues(alpha: 0.15),
+                color: color.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: Icon(cat.icon, color: cat.color, size: 20),
+              child: Center(child: Text(emoji, style: const TextStyle(fontSize: 20))),
             ),
             const SizedBox(width: 12),
 
-            // Descrição + badges
+            // Descrição + tipo + data
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    t.description,
+                    reserve.description,
                     style: TextStyle(
                       color: context.kTextPrimary,
                       fontWeight: FontWeight.w600,
                       fontSize: 14,
                     ),
                     overflow: TextOverflow.ellipsis,
-                    maxLines: 1,
                   ),
                   const SizedBox(height: 4),
-                  Wrap(
-                    spacing: 4,
-                    runSpacing: 4,
+                  Row(
                     children: [
-                      _Badge(label: cat.name, color: cat.color),
-                      _Badge(label: groupLabel(t.groupId), color: AppColors.accent),
-                      if (t.groupId == 'parcelamento')
-                        _Badge(
-                          label: '${occurrence.installmentIndex}/${occurrence.installmentTotal}',
-                          color: context.kTextSecondary,
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: color.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(6),
                         ),
-                      if (t.bankId != null)
-                        _Badge(label: bankLabel(t.bankId), color: AppColors.neonCyan),
-                      if (t.familyMode)
-                        _Badge(
-                          label: t.familyMember != null && t.familyMember!.isNotEmpty
-                              ? '👨‍👩‍👧 ${t.familyMember}'
-                              : '👨‍👩‍👧 Família',
-                          color: AppColors.warning,
+                        child: Text(
+                          label,
+                          style: TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.w600),
                         ),
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        formatDate(reserve.date),
+                        style: TextStyle(color: context.kTextSecondary, fontSize: 11),
+                      ),
                     ],
                   ),
                 ],
@@ -97,9 +94,9 @@ class TransactionCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Text(
-                  formatCurrency(occurrence.amount, currency: currency),
-                  style: const TextStyle(
-                    color: AppColors.expense,
+                  formatCurrency(reserve.amount, currency: currency),
+                  style: TextStyle(
+                    color: color,
                     fontWeight: FontWeight.bold,
                     fontFamily: 'JetBrainsMono',
                     fontSize: 13,
@@ -127,23 +124,4 @@ class TransactionCard extends StatelessWidget {
       ),
     );
   }
-}
-
-class _Badge extends StatelessWidget {
-  final String label;
-  final Color color;
-  const _Badge({required this.label, required this.color});
-
-  @override
-  Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-        decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.15),
-          borderRadius: BorderRadius.circular(6),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.w600),
-        ),
-      );
 }

@@ -29,7 +29,8 @@ extension TxSortLabel on TxSort {
 
 // ─────────────────────────────────────────────────────────────────────────────
 class TransactionsScreen extends StatefulWidget {
-  const TransactionsScreen({super.key});
+  final DateTime? initialMonth;
+  const TransactionsScreen({super.key, this.initialMonth});
 
   @override
   State<TransactionsScreen> createState() => _TransactionsScreenState();
@@ -38,7 +39,7 @@ class TransactionsScreen extends StatefulWidget {
 class _TransactionsScreenState extends State<TransactionsScreen>
     with SingleTickerProviderStateMixin {
   late final TabController _tabCtrl;
-  DateTime _activeMonth = DateTime.now();
+  late DateTime _activeMonth;
 
   List<TransactionOccurrence> _creditOccurrences = [];
   List<TransactionOccurrence> _debitOccurrences = [];
@@ -64,13 +65,16 @@ class _TransactionsScreenState extends State<TransactionsScreen>
   @override
   void initState() {
     super.initState();
+    _activeMonth = widget.initialMonth ?? DateTime.now();
     _tabCtrl = TabController(length: 2, vsync: this);
     _tabCtrl.addListener(() => setState(() {}));
+    DatabaseService.dataVersion.addListener(_load);
     _load();
   }
 
   @override
   void dispose() {
+    DatabaseService.dataVersion.removeListener(_load);
     _tabCtrl.dispose();
     super.dispose();
   }

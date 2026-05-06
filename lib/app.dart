@@ -5,6 +5,7 @@ import 'screens/transactions_screen.dart';
 import 'screens/calendar_screen.dart';
 import 'screens/history_screen.dart';
 import 'screens/settings_screen.dart';
+import 'screens/reservas_screen.dart';
 import 'theme/app_theme.dart';
 
 class KontaApp extends StatelessWidget {
@@ -33,9 +34,13 @@ final _router = GoRouter(
       builder: (context, state, child) => _Shell(child: child),
       routes: [
         GoRoute(path: '/', builder: (_, __) => const DashboardScreen()),
-        GoRoute(path: '/transactions', builder: (_, __) => const TransactionsScreen()),
+        GoRoute(
+          path: '/transactions',
+          builder: (_, state) => TransactionsScreen(initialMonth: state.extra as DateTime?),
+        ),
         GoRoute(path: '/calendar', builder: (_, __) => const CalendarScreen()),
         GoRoute(path: '/history', builder: (_, __) => const HistoryScreen()),
+        GoRoute(path: '/reservas', builder: (_, __) => const ReservasScreen()),
         GoRoute(path: '/settings', builder: (_, __) => const SettingsScreen()),
       ],
     ),
@@ -53,7 +58,17 @@ class _Shell extends StatefulWidget {
 class _ShellState extends State<_Shell> {
   int _currentIndex = 0;
 
-  static const _routes = ['/', '/transactions', '/calendar', '/history'];
+  static const _routes = ['/', '/transactions', '/calendar', '/history', '/reservas'];
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final location = GoRouterState.of(context).uri.path;
+    final idx = _routes.indexOf(location);
+    if (idx >= 0 && idx != _currentIndex) {
+      _currentIndex = idx;
+    }
+  }
 
   void _onTap(int index) {
     setState(() => _currentIndex = index);
@@ -76,6 +91,7 @@ class _ShellState extends State<_Shell> {
             BottomNavigationBarItem(icon: Icon(Icons.list_outlined), activeIcon: Icon(Icons.list), label: 'Lançamentos'),
             BottomNavigationBarItem(icon: Icon(Icons.calendar_month_outlined), activeIcon: Icon(Icons.calendar_month), label: 'Calendário'),
             BottomNavigationBarItem(icon: Icon(Icons.bar_chart_outlined), activeIcon: Icon(Icons.bar_chart), label: 'Histórico'),
+            BottomNavigationBarItem(icon: Icon(Icons.savings_outlined), activeIcon: Icon(Icons.savings), label: 'Reservas'),
           ],
         ),
       ),

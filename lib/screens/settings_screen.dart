@@ -334,6 +334,25 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 themeNotifier.value = v ? ThemeMode.dark : ThemeMode.light;
               },
             ),
+            const Divider(height: 1),
+            _SwitchTile(
+              label: 'Saldo acumulado',
+              subtitle: 'Carrega o saldo restante do mês anterior',
+              value: _settings.carryoverMode,
+              onChanged: (v) { _settings.carryoverMode = v; _save(); },
+            ),
+          ]),
+
+          // ── Metas ─────────────────────────────────────────────────
+          const SizedBox(height: 20),
+          _SectionTitle('Metas'),
+          _Card(children: [
+            _SwitchTile(
+              label: 'Ativar metas',
+              subtitle: 'Gerencie metas na tela de Reservas',
+              value: _settings.goalsEnabled,
+              onChanged: (v) { _settings.goalsEnabled = v; _save(); },
+            ),
           ]),
 
           // ── Modo Família ──────────────────────────────────────────

@@ -2,10 +2,6 @@
 
 part of 'app_settings.dart';
 
-// **************************************************************************
-// TypeAdapterGenerator
-// **************************************************************************
-
 class AppSettingsAdapter extends TypeAdapter<AppSettings> {
   @override
   final int typeId = 2;
@@ -22,13 +18,16 @@ class AppSettingsAdapter extends TypeAdapter<AppSettings> {
       familyMode: fields[2] as bool,
       familyCount: fields[3] as int,
       familyNames: (fields[4] as List?)?.cast<String>(),
+      carryoverMode: fields[5] as bool? ?? false,
+      goalsEnabled: fields[6] as bool? ?? false,
+      // fields[7] e fields[8] (goalName/goalTarget antigos) são ignorados
     );
   }
 
   @override
   void write(BinaryWriter writer, AppSettings obj) {
     writer
-      ..writeByte(5)
+      ..writeByte(7)
       ..writeByte(0)
       ..write(obj.currency)
       ..writeByte(1)
@@ -38,7 +37,11 @@ class AppSettingsAdapter extends TypeAdapter<AppSettings> {
       ..writeByte(3)
       ..write(obj.familyCount)
       ..writeByte(4)
-      ..write(obj.familyNames);
+      ..write(obj.familyNames)
+      ..writeByte(5)
+      ..write(obj.carryoverMode)
+      ..writeByte(6)
+      ..write(obj.goalsEnabled);
   }
 
   @override

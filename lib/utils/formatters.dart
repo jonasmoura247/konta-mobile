@@ -9,6 +9,9 @@ String formatMonth(DateTime date) => DateFormat('MMMM yyyy', 'pt_BR').format(dat
 
 String formatMonthShort(DateTime date) => DateFormat('MMM/yy', 'pt_BR').format(date);
 
+String formatMonthAbbrev(DateTime date) =>
+    DateFormat('MMM', 'pt_BR').format(date).replaceAll('.', '');
+
 String formatDate(DateTime date) => DateFormat('dd/MM/yyyy', 'pt_BR').format(date);
 
 String formatDateShort(DateTime date) => DateFormat('dd/MM', 'pt_BR').format(date);

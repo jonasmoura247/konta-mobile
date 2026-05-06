@@ -3,7 +3,10 @@
     "allow": [
       "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\Jonas\\\\Desktop\\\\farmas_mobile\" -Recurse -File -Name)",
       "Bash(Select-Object -First 50)",
-      "Bash(flutter analyze *)"
+      "Bash(flutter analyze *)",
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\Jonas\\\\Desktop\\\\farmas_mobile\" -Recurse -Directory)",
+      "Bash(Select-Object FullName)",
+      "Bash(grep -v \"^$\")"
     ]
   }
 }
