@@ -35,12 +35,3 @@ String groupLabel(String groupId) {
     default: return groupId;
   }
 }
-
-String bankLabel(String? bankId) {
-  switch (bankId) {
-    case 'itau': return 'Itaú';
-    case 'nubank': return 'Nubank';
-    case 'inter': return 'Inter';
-    default: return 'Sem banco';
-  }
-}

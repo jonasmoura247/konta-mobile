@@ -41,6 +41,9 @@ class AnnualControlSection extends StatelessWidget {
     return s.totalIncome - s.totalExpenses - s.totalDebit;
   }
 
+  double _monthIncome(DateTime month) =>
+      yearSummary.monthSummaries[month.month - 1].totalIncome;
+
   @override
   Widget build(BuildContext context) {
     final year = yearSummary.year;
@@ -149,7 +152,7 @@ class AnnualControlSection extends StatelessWidget {
                     child: _MonthInsight(
                       label: 'Melhor mês',
                       month: yearSummary.bestMonth!,
-                      balance: _monthBalance(yearSummary.bestMonth!),
+                      value: _monthBalance(yearSummary.bestMonth!),
                       color: AppColors.income,
                       currency: currency,
                     ),
@@ -166,8 +169,59 @@ class AnnualControlSection extends StatelessWidget {
                     child: _MonthInsight(
                       label: 'Pior mês',
                       month: yearSummary.worstMonth!,
-                      balance: _monthBalance(yearSummary.worstMonth!),
+                      value: _monthBalance(yearSummary.worstMonth!),
                       color: AppColors.expense,
+                      currency: currency,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ],
+
+        // Maior / menor entrada
+        if (yearSummary.highestIncomeMonth != null ||
+            yearSummary.lowestIncomeMonth != null) ...[
+          const SizedBox(height: 10),
+          Container(
+            padding:
+                const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            decoration: BoxDecoration(
+              color: context.kCard,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: context.kCardBorder),
+            ),
+            child: Row(
+              children: [
+                if (yearSummary.highestIncomeMonth != null)
+                  Expanded(
+                    child: _MonthInsight(
+                      label: 'Maior entrada',
+                      month: yearSummary.highestIncomeMonth!,
+                      value: _monthIncome(yearSummary.highestIncomeMonth!),
+                      color: AppColors.income,
+                      currency: currency,
+                    ),
+                  ),
+                if (yearSummary.highestIncomeMonth != null &&
+                    yearSummary.lowestIncomeMonth != null &&
+                    yearSummary.highestIncomeMonth !=
+                        yearSummary.lowestIncomeMonth)
+                  Container(
+                    width: 1,
+                    height: 36,
+                    color: context.kCardBorder,
+                    margin: const EdgeInsets.symmetric(horizontal: 12),
+                  ),
+                if (yearSummary.lowestIncomeMonth != null &&
+                    yearSummary.lowestIncomeMonth !=
+                        yearSummary.highestIncomeMonth)
+                  Expanded(
+                    child: _MonthInsight(
+                      label: 'Menor entrada',
+                      month: yearSummary.lowestIncomeMonth!,
+                      value: _monthIncome(yearSummary.lowestIncomeMonth!),
+                      color: AppColors.accent,
                       currency: currency,
                     ),
                   ),
@@ -216,14 +270,14 @@ class AnnualControlSection extends StatelessWidget {
 class _MonthInsight extends StatelessWidget {
   final String label;
   final DateTime month;
-  final double balance;
+  final double value;
   final Color color;
   final String currency;
 
   const _MonthInsight({
     required this.label,
     required this.month,
-    required this.balance,
+    required this.value,
     required this.color,
     required this.currency,
   });
@@ -257,7 +311,7 @@ class _MonthInsight extends StatelessWidget {
             const SizedBox(width: 6),
             Expanded(
               child: Text(
-                formatCurrency(balance, currency: currency),
+                formatCurrency(value, currency: currency),
                 style: TextStyle(
                   color: color,
                   fontSize: 12,

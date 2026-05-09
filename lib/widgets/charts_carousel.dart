@@ -19,7 +19,7 @@ class _ChartsCarouselState extends State<ChartsCarousel> {
   final _pageCtrl = PageController();
   int _page = 0;
 
-  static const _titles = ['Gastos por Categoria', 'Gastos por Cartão', 'Gastos por Tipo'];
+  static const _titles = ['Gastos por Categoria', 'Gastos por Cartão', 'Gastos por Tipo', 'Total por Cartão'];
 
   static const _groupColors = <String, Color>{
     'avista': AppColors.neonCyan,
@@ -54,6 +54,16 @@ class _ChartsCarouselState extends State<ChartsCarousel> {
         );
       }).toList();
 
+  List<DonutSegment> _bankGrossSegments() => widget.summary.byBankGross.entries.map((e) {
+        if (e.key == 'sem_banco') return DonutSegment(label: 'Sem banco', color: AppColors.textSecondary, value: e.value);
+        final bank = getBankById(e.key);
+        return DonutSegment(
+          label: bank?.name ?? e.key,
+          color: bank?.color ?? AppColors.textSecondary,
+          value: e.value,
+        );
+      }).toList();
+
   @override
   void dispose() {
     _pageCtrl.dispose();
@@ -63,10 +73,12 @@ class _ChartsCarouselState extends State<ChartsCarousel> {
   @override
   Widget build(BuildContext context) {
     final total = widget.summary.totalExpenses;
+    final grossTotal = widget.summary.byBankGross.values.fold(0.0, (s, v) => s + v);
     final charts = [
       DonutChart(segments: _categorySegments(), total: total, currency: widget.currency),
       DonutChart(segments: _bankSegments(), total: total, currency: widget.currency),
       DonutChart(segments: _groupSegments(), total: total, currency: widget.currency),
+      DonutChart(segments: _bankGrossSegments(), total: grossTotal, currency: widget.currency),
     ];
 
     return Column(
@@ -80,7 +92,7 @@ class _ChartsCarouselState extends State<ChartsCarousel> {
               style: TextStyle(color: context.kTextPrimary, fontSize: 15, fontWeight: FontWeight.bold),
             ),
             Row(
-              children: List.generate(3, (i) => GestureDetector(
+              children: List.generate(4, (i) => GestureDetector(
                 onTap: () => _pageCtrl.animateToPage(i, duration: const Duration(milliseconds: 300), curve: Curves.easeInOut),
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 250),

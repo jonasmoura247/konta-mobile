@@ -1,19 +1,35 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/material.dart' show ThemeMode;
+import 'package:go_router/go_router.dart';
 import '../models/app_settings.dart';
 import '../models/category.dart';
 import '../models/bank.dart';
 import '../services/database_service.dart';
 import '../services/import_service.dart';
 import '../theme/app_theme.dart';
+import '../utils/privacy_policy_text.dart';
 
 // ───────────────────────────────────────────────────────── color palette ──
 const List<Color> _kPalette = [
-  Color(0xFFEF5350), Color(0xFFEC407A), Color(0xFFAB47BC), Color(0xFF7E57C2),
-  Color(0xFF5C6BC0), Color(0xFF42A5F5), Color(0xFF26C6DA), Color(0xFF26A69A),
-  Color(0xFF66BB6A), Color(0xFFD4E157), Color(0xFFFFCA28), Color(0xFFFFA726),
-  Color(0xFFFF7043), Color(0xFF8D6E63), Color(0xFF78909C), Color(0xFF546E7A),
-  Color(0xFF00E5FF), Color(0xFF69FF47), Color(0xFFFF6B35), Color(0xFF820AD1),
+  Color(0xFFEF5350),
+  Color(0xFFEC407A),
+  Color(0xFFAB47BC),
+  Color(0xFF7E57C2),
+  Color(0xFF5C6BC0),
+  Color(0xFF42A5F5),
+  Color(0xFF26C6DA),
+  Color(0xFF26A69A),
+  Color(0xFF66BB6A),
+  Color(0xFFD4E157),
+  Color(0xFFFFCA28),
+  Color(0xFFFFA726),
+  Color(0xFFFF7043),
+  Color(0xFF8D6E63),
+  Color(0xFF78909C),
+  Color(0xFF546E7A),
+  Color(0xFF00E5FF),
+  Color(0xFF69FF47),
+  Color(0xFFFF6B35),
+  Color(0xFF820AD1),
 ];
 
 Future<Color?> _pickColor(BuildContext context, Color initial) {
@@ -31,7 +47,7 @@ Future<Color?> _pickColor(BuildContext context, Color initial) {
               spacing: 8,
               runSpacing: 8,
               children: _kPalette.map((c) {
-                final sel = picked.value == c.value;
+                final sel = picked == c;
                 return GestureDetector(
                   onTap: () => setSt(() => picked = c),
                   child: Container(
@@ -40,7 +56,9 @@ Future<Color?> _pickColor(BuildContext context, Color initial) {
                     decoration: BoxDecoration(
                       color: c,
                       shape: BoxShape.circle,
-                      border: sel ? Border.all(color: Colors.white, width: 3) : null,
+                      border: sel
+                          ? Border.all(color: Colors.white, width: 3)
+                          : null,
                     ),
                   ),
                 );
@@ -50,15 +68,25 @@ Future<Color?> _pickColor(BuildContext context, Color initial) {
             Container(
               width: double.infinity,
               height: 40,
-              decoration: BoxDecoration(color: picked, borderRadius: BorderRadius.circular(8)),
-              child: Center(child: Text('Cor selecionada', style: TextStyle(color: picked.computeLuminance() > 0.4 ? Colors.black : Colors.white, fontSize: 12))),
+              decoration: BoxDecoration(
+                  color: picked, borderRadius: BorderRadius.circular(8)),
+              child: Center(
+                  child: Text('Cor selecionada',
+                      style: TextStyle(
+                          color: picked.computeLuminance() > 0.4
+                              ? Colors.black
+                              : Colors.white,
+                          fontSize: 12))),
             ),
           ],
         ),
       ),
       actions: [
-        TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancelar')),
-        TextButton(onPressed: () => Navigator.pop(ctx, picked), child: const Text('OK')),
+        TextButton(
+            onPressed: () => Navigator.pop(ctx), child: const Text('Cancelar')),
+        TextButton(
+            onPressed: () => Navigator.pop(ctx, picked),
+            child: const Text('OK')),
       ],
     ),
   );
@@ -76,6 +104,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
   late AppSettings _settings;
   late List<Map<String, dynamic>> _customCats;
   late List<Map<String, dynamic>> _customBanks;
+  late List<String> _hiddenBankIds;
+  late List<String> _hiddenCategoryIds;
 
   @override
   void initState() {
@@ -83,6 +113,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _settings = DatabaseService.getSettings();
     _customCats = DatabaseService.getCustomCategories();
     _customBanks = DatabaseService.getCustomBanks();
+    _hiddenBankIds = List.from(DatabaseService.getHiddenBankIds());
+    _hiddenCategoryIds = List.from(DatabaseService.getHiddenCategoryIds());
   }
 
   Future<void> _save() async {
@@ -128,7 +160,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
       builder: (ctx) => StatefulBuilder(
         builder: (ctx2, setSt) => AlertDialog(
           backgroundColor: ctx.kCard,
-          title: Text('Nova categoria', style: TextStyle(color: ctx.kTextPrimary)),
+          title:
+              Text('Nova categoria', style: TextStyle(color: ctx.kTextPrimary)),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -147,23 +180,38 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   if (c != null) setSt(() => newColor = c);
                 },
                 child: Row(children: [
-                  Container(width: 28, height: 28, decoration: BoxDecoration(color: newColor, shape: BoxShape.circle)),
+                  Container(
+                      width: 28,
+                      height: 28,
+                      decoration: BoxDecoration(
+                          color: newColor, shape: BoxShape.circle)),
                   const SizedBox(width: 8),
-                  Text('Toque para mudar cor', style: TextStyle(color: ctx.kTextSecondary, fontSize: 12)),
+                  Text('Toque para mudar cor',
+                      style:
+                          TextStyle(color: ctx.kTextSecondary, fontSize: 12)),
                 ]),
               ),
             ],
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancelar')),
-            TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Adicionar')),
+            TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: const Text('Cancelar')),
+            TextButton(
+                onPressed: () => Navigator.pop(ctx, true),
+                child: const Text('Adicionar')),
           ],
         ),
       ),
     );
     if (confirmed == true && nameCtrl.text.trim().isNotEmpty) {
       final id = 'custom_${DateTime.now().millisecondsSinceEpoch}';
-      _customCats.add({'id': id, 'name': nameCtrl.text.trim(), 'color': colorToHex(newColor), 'icon': ''});
+      _customCats.add({
+        'id': id,
+        'name': nameCtrl.text.trim(),
+        'color': colorToHex(newColor),
+        'icon': ''
+      });
       await _saveCats();
     }
   }
@@ -205,7 +253,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
       builder: (ctx) => StatefulBuilder(
         builder: (ctx2, setSt) => AlertDialog(
           backgroundColor: ctx.kCard,
-          title: Text('Editar cartão', style: TextStyle(color: ctx.kTextPrimary)),
+          title:
+              Text('Editar cartão', style: TextStyle(color: ctx.kTextPrimary)),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -224,23 +273,37 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   if (c != null) setSt(() => newColor = c);
                 },
                 child: Row(children: [
-                  Container(width: 28, height: 28, decoration: BoxDecoration(color: newColor, shape: BoxShape.circle)),
+                  Container(
+                      width: 28,
+                      height: 28,
+                      decoration: BoxDecoration(
+                          color: newColor, shape: BoxShape.circle)),
                   const SizedBox(width: 8),
-                  Text('Toque para mudar cor', style: TextStyle(color: ctx.kTextSecondary, fontSize: 12)),
+                  Text('Toque para mudar cor',
+                      style:
+                          TextStyle(color: ctx.kTextSecondary, fontSize: 12)),
                 ]),
               ),
             ],
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancelar')),
-            TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Salvar')),
+            TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: const Text('Cancelar')),
+            TextButton(
+                onPressed: () => Navigator.pop(ctx, true),
+                child: const Text('Salvar')),
           ],
         ),
       ),
     );
     if (confirmed == true) {
       final idx = _customBanks.indexWhere((b) => b['id'] == bank.id);
-      final entry = {'id': bank.id, 'name': nameCtrl.text.trim().isEmpty ? bank.name : nameCtrl.text.trim(), 'color': colorToHex(newColor)};
+      final entry = {
+        'id': bank.id,
+        'name': nameCtrl.text.trim().isEmpty ? bank.name : nameCtrl.text.trim(),
+        'color': colorToHex(newColor)
+      };
       if (idx >= 0) {
         _customBanks[idx] = entry;
       } else {
@@ -258,7 +321,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
       builder: (ctx) => StatefulBuilder(
         builder: (ctx2, setSt) => AlertDialog(
           backgroundColor: ctx.kCard,
-          title: Text('Novo cartão/banco', style: TextStyle(color: ctx.kTextPrimary)),
+          title: Text('Novo cartão/banco',
+              style: TextStyle(color: ctx.kTextPrimary)),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -277,23 +341,37 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   if (c != null) setSt(() => newColor = c);
                 },
                 child: Row(children: [
-                  Container(width: 28, height: 28, decoration: BoxDecoration(color: newColor, shape: BoxShape.circle)),
+                  Container(
+                      width: 28,
+                      height: 28,
+                      decoration: BoxDecoration(
+                          color: newColor, shape: BoxShape.circle)),
                   const SizedBox(width: 8),
-                  Text('Toque para mudar cor', style: TextStyle(color: ctx.kTextSecondary, fontSize: 12)),
+                  Text('Toque para mudar cor',
+                      style:
+                          TextStyle(color: ctx.kTextSecondary, fontSize: 12)),
                 ]),
               ),
             ],
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancelar')),
-            TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Adicionar')),
+            TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: const Text('Cancelar')),
+            TextButton(
+                onPressed: () => Navigator.pop(ctx, true),
+                child: const Text('Adicionar')),
           ],
         ),
       ),
     );
     if (confirmed == true && nameCtrl.text.trim().isNotEmpty) {
       final id = 'custom_${DateTime.now().millisecondsSinceEpoch}';
-      _customBanks.add({'id': id, 'name': nameCtrl.text.trim(), 'color': colorToHex(newColor)});
+      _customBanks.add({
+        'id': id,
+        'name': nameCtrl.text.trim(),
+        'color': colorToHex(newColor)
+      });
       await _saveBanks();
     }
   }
@@ -303,12 +381,35 @@ class _SettingsScreenState extends State<SettingsScreen> {
     await _saveBanks();
   }
 
+  void _toggleBankVisibility(String id) async {
+    setState(() {
+      if (_hiddenBankIds.contains(id)) {
+        _hiddenBankIds.remove(id);
+      } else {
+        _hiddenBankIds.add(id);
+      }
+    });
+    await DatabaseService.saveHiddenBankIds(_hiddenBankIds);
+  }
+
+  void _toggleCategoryVisibility(String id) async {
+    setState(() {
+      if (_hiddenCategoryIds.contains(id)) {
+        _hiddenCategoryIds.remove(id);
+      } else {
+        _hiddenCategoryIds.add(id);
+      }
+    });
+    await DatabaseService.saveHiddenCategoryIds(_hiddenCategoryIds);
+  }
+
   // ────────────────────────────────────────────────────── build ──
   @override
   Widget build(BuildContext context) {
     final allCats = getAllCategories();
     final allBanks = getAllBanks();
-    final isCustomCat = (String id) => _customCats.any((c) => c['id'] == id && !kDefaultCategories.any((d) => d.id == id));
+    bool isCustomCat(String id) => _customCats.any(
+        (c) => c['id'] == id && !kDefaultCategories.any((d) => d.id == id));
 
     return Scaffold(
       appBar: AppBar(title: const Text('Configurações')),
@@ -321,8 +422,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
             _DropdownTile<String>(
               label: 'Moeda',
               value: _settings.currency,
-              items: const {'BRL': 'R\$ Real (BRL)', 'USD': '\$ Dólar (USD)', 'EUR': '€ Euro (EUR)'},
-              onChanged: (v) { _settings.currency = v!; _save(); },
+              items: const {
+                'BRL': 'R\$ Real (BRL)',
+                'USD': '\$ Dólar (USD)',
+                'EUR': '€ Euro (EUR)'
+              },
+              onChanged: (v) {
+                _settings.currency = v!;
+                _save();
+              },
             ),
             const Divider(height: 1),
             _SwitchTile(
@@ -339,7 +447,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
               label: 'Saldo acumulado',
               subtitle: 'Carrega o saldo restante do mês anterior',
               value: _settings.carryoverMode,
-              onChanged: (v) { _settings.carryoverMode = v; _save(); },
+              onChanged: (v) {
+                _settings.carryoverMode = v;
+                _save();
+              },
             ),
           ]),
 
@@ -351,7 +462,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
               label: 'Ativar metas',
               subtitle: 'Gerencie metas na tela de Reservas',
               value: _settings.goalsEnabled,
-              onChanged: (v) { _settings.goalsEnabled = v; _save(); },
+              onChanged: (v) {
+                _settings.goalsEnabled = v;
+                _save();
+              },
             ),
           ]),
 
@@ -363,25 +477,35 @@ class _SettingsScreenState extends State<SettingsScreen> {
               label: 'Ativar modo família',
               subtitle: 'Divide gastos entre membros',
               value: _settings.familyMode,
-              onChanged: (v) { _settings.familyMode = v; _save(); },
+              onChanged: (v) {
+                _settings.familyMode = v;
+                _save();
+              },
             ),
             if (_settings.familyMode) ...[
               const Divider(height: 1),
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Número de membros', style: TextStyle(color: context.kTextSecondary, fontSize: 12)),
+                    Text('Número de membros',
+                        style: TextStyle(
+                            color: context.kTextSecondary, fontSize: 12)),
                     Slider(
                       value: _settings.familyCount.toDouble(),
                       min: 2,
                       max: 6,
                       divisions: 4,
                       label: _settings.familyCount.toString(),
-                      onChanged: (v) { _settings.familyCount = v.toInt(); _save(); },
+                      onChanged: (v) {
+                        _settings.familyCount = v.toInt();
+                        _save();
+                      },
                     ),
-                    Text('${_settings.familyCount} membros', style: TextStyle(color: context.kTextPrimary)),
+                    Text('${_settings.familyCount} membros',
+                        style: TextStyle(color: context.kTextPrimary)),
                   ],
                 ),
               ),
@@ -398,7 +522,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 onPressed: _addCategory,
                 icon: const Icon(Icons.add, size: 16),
                 label: const Text('Nova', style: TextStyle(fontSize: 12)),
-                style: TextButton.styleFrom(foregroundColor: AppColors.accent, padding: EdgeInsets.zero),
+                style: TextButton.styleFrom(
+                    foregroundColor: AppColors.accent,
+                    padding: EdgeInsets.zero),
               ),
             ],
           ),
@@ -406,8 +532,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ...allCats.asMap().entries.map((e) {
               final i = e.key;
               final cat = e.value;
-              final displayColor = _overrideColor(cat.id, cat.color, isCat: true);
+              final displayColor =
+                  _overrideColor(cat.id, cat.color, isCat: true);
               final isCustom = isCustomCat(cat.id);
+              final isCatHidden = _hiddenCategoryIds.contains(cat.id);
               return Column(
                 children: [
                   if (i > 0) const Divider(height: 1),
@@ -415,24 +543,62 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     dense: true,
                     leading: GestureDetector(
                       onTap: () => _editCategoryColor(cat),
-                      child: Container(
-                        width: 28,
-                        height: 28,
-                        decoration: BoxDecoration(color: displayColor, shape: BoxShape.circle),
-                        child: Icon(cat.icon, color: Colors.white, size: 14),
+                      child: Opacity(
+                        opacity: isCatHidden ? 0.35 : 1.0,
+                        child: Container(
+                          width: 28,
+                          height: 28,
+                          decoration: BoxDecoration(
+                              color: displayColor, shape: BoxShape.circle),
+                          child: Icon(cat.icon, color: Colors.white, size: 14),
+                        ),
                       ),
                     ),
-                    title: Text(cat.name, style: TextStyle(color: context.kTextPrimary, fontSize: 13)),
-                    subtitle: Text(isCustom ? 'Customizada' : 'Toque na cor para editar', style: TextStyle(color: context.kTextSecondary, fontSize: 10)),
-                    trailing: isCustom
-                        ? IconButton(
-                            icon: const Icon(Icons.delete_outline, size: 16, color: AppColors.expense),
-                            onPressed: () => _deleteCustomCategory(cat.id),
-                          )
-                        : GestureDetector(
-                            onTap: () => _editCategoryColor(cat),
-                            child: const Icon(Icons.color_lens_outlined, size: 16, color: AppColors.accent),
+                    title: Text(cat.name,
+                        style: TextStyle(
+                            color: isCatHidden
+                                ? context.kTextSecondary
+                                : context.kTextPrimary,
+                            fontSize: 13)),
+                    subtitle: Text(
+                        isCustom ? 'Customizada' : 'Toque na cor para editar',
+                        style: TextStyle(
+                            color: context.kTextSecondary, fontSize: 10)),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          icon: Icon(
+                            isCatHidden
+                                ? Icons.visibility_off_outlined
+                                : Icons.visibility_outlined,
+                            size: 18,
+                            color: isCatHidden
+                                ? context.kTextSecondary
+                                : AppColors.accent,
                           ),
+                          onPressed: () => _toggleCategoryVisibility(cat.id),
+                          constraints: const BoxConstraints(),
+                          padding: const EdgeInsets.all(6),
+                        ),
+                        if (isCustom)
+                          IconButton(
+                            icon: const Icon(Icons.delete_outline,
+                                size: 18, color: AppColors.expense),
+                            onPressed: () => _deleteCustomCategory(cat.id),
+                            constraints: const BoxConstraints(),
+                            padding: const EdgeInsets.all(6),
+                          )
+                        else
+                          IconButton(
+                            icon: const Icon(Icons.color_lens_outlined,
+                                size: 18, color: AppColors.accent),
+                            onPressed: () => _editCategoryColor(cat),
+                            constraints: const BoxConstraints(),
+                            padding: const EdgeInsets.all(6),
+                          ),
+                      ],
+                    ),
                   ),
                 ],
               );
@@ -449,7 +615,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 onPressed: _addBank,
                 icon: const Icon(Icons.add, size: 16),
                 label: const Text('Novo', style: TextStyle(fontSize: 12)),
-                style: TextButton.styleFrom(foregroundColor: AppColors.accent, padding: EdgeInsets.zero),
+                style: TextButton.styleFrom(
+                    foregroundColor: AppColors.accent,
+                    padding: EdgeInsets.zero),
               ),
             ],
           ),
@@ -457,32 +625,69 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ...allBanks.asMap().entries.map((e) {
               final i = e.key;
               final bank = e.value;
-              final displayColor = _overrideColor(bank.id, bank.color, isCat: false);
-              final isCustom = _customBanks.any((b) => b['id'] == bank.id && !kDefaultBanks.any((d) => d.id == bank.id));
+              final displayColor =
+                  _overrideColor(bank.id, bank.color, isCat: false);
+              final isCustom = _customBanks.any((b) =>
+                  b['id'] == bank.id &&
+                  !kDefaultBanks.any((d) => d.id == bank.id));
+              final isHidden = _hiddenBankIds.contains(bank.id);
               return Column(
                 children: [
                   if (i > 0) const Divider(height: 1),
                   ListTile(
                     dense: true,
-                    leading: Container(
-                      width: 28,
-                      height: 28,
-                      decoration: BoxDecoration(color: displayColor, borderRadius: BorderRadius.circular(6)),
-                      child: const Icon(Icons.credit_card, color: Colors.white, size: 14),
+                    leading: Opacity(
+                      opacity: isHidden ? 0.35 : 1.0,
+                      child: Container(
+                        width: 28,
+                        height: 28,
+                        decoration: BoxDecoration(
+                            color: displayColor,
+                            borderRadius: BorderRadius.circular(6)),
+                        child: const Icon(Icons.credit_card,
+                            color: Colors.white, size: 14),
+                      ),
                     ),
-                    title: Text(bank.name, style: TextStyle(color: context.kTextPrimary, fontSize: 13)),
-                    subtitle: Text(isCustom ? 'Customizado' : 'Padrão', style: TextStyle(color: context.kTextSecondary, fontSize: 10)),
+                    title: Text(bank.name,
+                        style: TextStyle(
+                            color: isHidden
+                                ? context.kTextSecondary
+                                : context.kTextPrimary,
+                            fontSize: 13)),
+                    subtitle: Text(isCustom ? 'Customizado' : 'Padrão',
+                        style: TextStyle(
+                            color: context.kTextSecondary, fontSize: 10)),
                     trailing: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         IconButton(
-                          icon: const Icon(Icons.edit_outlined, size: 16, color: AppColors.accent),
+                          icon: Icon(
+                            isHidden
+                                ? Icons.visibility_off_outlined
+                                : Icons.visibility_outlined,
+                            size: 18,
+                            color: isHidden
+                                ? context.kTextSecondary
+                                : AppColors.accent,
+                          ),
+                          onPressed: () => _toggleBankVisibility(bank.id),
+                          constraints: const BoxConstraints(),
+                          padding: const EdgeInsets.all(6),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.edit_outlined,
+                              size: 18, color: AppColors.accent),
                           onPressed: () => _editBank(bank),
+                          constraints: const BoxConstraints(),
+                          padding: const EdgeInsets.all(6),
                         ),
                         if (isCustom)
                           IconButton(
-                            icon: const Icon(Icons.delete_outline, size: 16, color: AppColors.expense),
+                            icon: const Icon(Icons.delete_outline,
+                                size: 18, color: AppColors.expense),
                             onPressed: () => _deleteCustomBank(bank.id),
+                            constraints: const BoxConstraints(),
+                            padding: const EdgeInsets.all(6),
                           ),
                       ],
                     ),
@@ -498,8 +703,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
           _Card(children: [
             ListTile(
               leading: const Icon(Icons.upload_file, color: AppColors.accent),
-              title: Text('Importar dados (JSON)', style: TextStyle(color: context.kTextPrimary)),
-              subtitle: Text('Importar farmas-dados.json', style: TextStyle(color: context.kTextSecondary, fontSize: 12)),
+              title: Text('Importar dados (JSON)',
+                  style: TextStyle(color: context.kTextPrimary)),
+              subtitle: Text('Importar farmas-dados.json',
+                  style:
+                      TextStyle(color: context.kTextSecondary, fontSize: 12)),
               onTap: () async {
                 final messenger = ScaffoldMessenger.of(context);
                 final result = await ImportService.importJsonFromPicker();
@@ -508,44 +716,61 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   content: Text(result == null
                       ? 'Importação cancelada'
                       : '${result.transactions} transações e ${result.incomes} entradas importadas'),
-                  backgroundColor: result == null ? AppColors.textSecondary : AppColors.income,
+                  backgroundColor: result == null
+                      ? AppColors.textSecondary
+                      : AppColors.income,
                 ));
               },
             ),
             const Divider(height: 1),
             ListTile(
               leading: const Icon(Icons.download, color: AppColors.neonCyan),
-              title: Text('Exportar dados (JSON)', style: TextStyle(color: context.kTextPrimary)),
-              subtitle: Text('Salvar backup na pasta Downloads', style: TextStyle(color: context.kTextSecondary, fontSize: 12)),
+              title: Text('Exportar dados (JSON)',
+                  style: TextStyle(color: context.kTextPrimary)),
+              subtitle: Text('Salvar backup como konta.json',
+                  style:
+                      TextStyle(color: context.kTextSecondary, fontSize: 12)),
               onTap: () async {
                 final messenger = ScaffoldMessenger.of(context);
-                final path = await ImportService.exportJsonToDownloads();
+                final path = await ImportService.exportJsonWithPicker();
                 if (!mounted) return;
                 messenger.showSnackBar(SnackBar(
-                  content: Text('Exportado: $path'),
-                  backgroundColor: AppColors.income,
+                  content: Text(path == null
+                      ? 'Exportação cancelada'
+                      : 'Exportado: $path'),
+                  backgroundColor:
+                      path == null ? AppColors.textSecondary : AppColors.income,
                 ));
               },
             ),
             const Divider(height: 1),
             ListTile(
-              leading: const Icon(Icons.delete_forever, color: AppColors.expense),
-              title: const Text('Limpar todos os dados', style: TextStyle(color: AppColors.expense)),
+              leading:
+                  const Icon(Icons.delete_forever, color: AppColors.expense),
+              title: const Text('Limpar todos os dados',
+                  style: TextStyle(color: AppColors.expense)),
               onTap: () => showDialog(
                 context: context,
                 builder: (ctx) => AlertDialog(
                   backgroundColor: ctx.kCard,
-                  title: const Text('Apagar tudo?', style: TextStyle(color: AppColors.expense)),
-                  content: Text('Esta ação é irreversível. Todos os lançamentos serão excluídos.', style: TextStyle(color: ctx.kTextSecondary)),
+                  title: const Text('Apagar tudo?',
+                      style: TextStyle(color: AppColors.expense)),
+                  content: Text(
+                      'Esta ação é irreversível. Todos os lançamentos serão excluídos.',
+                      style: TextStyle(color: ctx.kTextSecondary)),
                   actions: [
-                    TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancelar')),
+                    TextButton(
+                        onPressed: () => Navigator.pop(ctx),
+                        child: const Text('Cancelar')),
                     TextButton(
                       onPressed: () async {
+                        Navigator.of(ctx).pop();
                         await DatabaseService.clearAll();
-                        if (context.mounted) Navigator.pop(context);
+                        if (!mounted) return;
                         setState(() {});
                       },
-                      child: const Text('Apagar', style: TextStyle(color: AppColors.expense)),
+                      child: const Text('Apagar',
+                          style: TextStyle(color: AppColors.expense)),
                     ),
                   ],
                 ),
@@ -554,11 +779,30 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ]),
 
           const SizedBox(height: 20),
+          _SectionTitle('Sobre'),
           _Card(children: [
             ListTile(
+              leading:
+                  const Icon(Icons.shield_outlined, color: AppColors.accent),
+              title: Text('Política de Privacidade',
+                  style: TextStyle(color: context.kTextPrimary)),
+              subtitle: Text(
+                  'Versão $kPrivacyPolicyVersion — $kPrivacyPolicyDate',
+                  style:
+                      TextStyle(color: context.kTextSecondary, fontSize: 12)),
+              trailing:
+                  Icon(Icons.chevron_right, color: context.kTextSecondary),
+              onTap: () => context.push('/privacy-policy?view=true'),
+            ),
+            const Divider(height: 1),
+            ListTile(
               leading: Icon(Icons.info_outline, color: context.kTextSecondary),
-              title: Text('Versão', style: TextStyle(color: context.kTextPrimary)),
-              trailing: Text('1.0.0', style: TextStyle(color: context.kTextSecondary, fontFamily: 'JetBrainsMono')),
+              title:
+                  Text('Versão', style: TextStyle(color: context.kTextPrimary)),
+              trailing: Text('1.0.0',
+                  style: TextStyle(
+                      color: context.kTextSecondary,
+                      fontFamily: 'JetBrainsMono')),
             ),
           ]),
           const SizedBox(height: 40),
@@ -576,7 +820,12 @@ class _SectionTitle extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Padding(
         padding: const EdgeInsets.only(bottom: 8),
-        child: Text(text, style: TextStyle(color: context.kTextSecondary, fontSize: 12, fontWeight: FontWeight.w600, letterSpacing: 0.8)),
+        child: Text(text,
+            style: TextStyle(
+                color: context.kTextSecondary,
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                letterSpacing: 0.8)),
       );
 }
 
@@ -586,7 +835,10 @@ class _Card extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-        decoration: BoxDecoration(color: context.kCard, borderRadius: BorderRadius.circular(16), border: Border.all(color: context.kCardBorder)),
+        decoration: BoxDecoration(
+            color: context.kCard,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: context.kCardBorder)),
         child: Column(children: children),
       );
 }
@@ -596,12 +848,20 @@ class _SwitchTile extends StatelessWidget {
   final String? subtitle;
   final bool value;
   final void Function(bool) onChanged;
-  const _SwitchTile({required this.label, this.subtitle, required this.value, required this.onChanged});
+  const _SwitchTile(
+      {required this.label,
+      this.subtitle,
+      required this.value,
+      required this.onChanged});
 
   @override
   Widget build(BuildContext context) => SwitchListTile(
-        title: Text(label, style: TextStyle(color: context.kTextPrimary, fontSize: 14)),
-        subtitle: subtitle != null ? Text(subtitle!, style: TextStyle(color: context.kTextSecondary, fontSize: 12)) : null,
+        title: Text(label,
+            style: TextStyle(color: context.kTextPrimary, fontSize: 14)),
+        subtitle: subtitle != null
+            ? Text(subtitle!,
+                style: TextStyle(color: context.kTextSecondary, fontSize: 12))
+            : null,
         value: value,
         onChanged: onChanged,
       );
@@ -612,7 +872,11 @@ class _DropdownTile<T> extends StatelessWidget {
   final T value;
   final Map<T, String> items;
   final void Function(T?) onChanged;
-  const _DropdownTile({required this.label, required this.value, required this.items, required this.onChanged});
+  const _DropdownTile(
+      {required this.label,
+      required this.value,
+      required this.items,
+      required this.onChanged});
 
   @override
   Widget build(BuildContext context) => Padding(
@@ -620,13 +884,17 @@ class _DropdownTile<T> extends StatelessWidget {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(label, style: TextStyle(color: context.kTextPrimary, fontSize: 14)),
+            Text(label,
+                style: TextStyle(color: context.kTextPrimary, fontSize: 14)),
             DropdownButton<T>(
               value: value,
               dropdownColor: context.kCard,
               style: TextStyle(color: context.kTextPrimary),
               underline: const SizedBox.shrink(),
-              items: items.entries.map((e) => DropdownMenuItem(value: e.key, child: Text(e.value))).toList(),
+              items: items.entries
+                  .map((e) =>
+                      DropdownMenuItem(value: e.key, child: Text(e.value)))
+                  .toList(),
               onChanged: onChanged,
             ),
           ],

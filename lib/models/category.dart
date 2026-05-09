@@ -107,7 +107,19 @@ List<Category> getAllCategories() {
       icon: _iconForCategory(name, emoji),
     );
   }
-  return result.values.toList();
+  // Deduplica por nome (case-insensitive), mantendo a de maior prioridade
+  // result.values itera em ordem de inserção: padrão → dinâmica → custom
+  // iterando normal e sobrescrevendo, o último (custom) fica no byName
+  final byName = <String, Category>{};
+  for (final c in result.values) {
+    byName[c.name.toLowerCase().trim()] = c;
+  }
+  return byName.values.toList();
+}
+
+List<Category> getVisibleCategories() {
+  final hidden = DatabaseService.getHiddenCategoryIds().toSet();
+  return getAllCategories().where((c) => !hidden.contains(c.id)).toList();
 }
 
 Category getCategoryById(String id) {

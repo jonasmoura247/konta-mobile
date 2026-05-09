@@ -1,4 +1,4 @@
-package com.jonas.farmas_mobile
+package br.com.konta.app
 
 import io.flutter.embedding.android.FlutterActivity
 

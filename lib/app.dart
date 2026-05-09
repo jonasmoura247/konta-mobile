@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:go_router/go_router.dart';
 import 'screens/dashboard_screen.dart';
 import 'screens/transactions_screen.dart';
@@ -6,6 +7,9 @@ import 'screens/calendar_screen.dart';
 import 'screens/history_screen.dart';
 import 'screens/settings_screen.dart';
 import 'screens/reservas_screen.dart';
+import 'screens/privacy_policy_screen.dart';
+import 'services/database_service.dart';
+import 'services/month_selection_service.dart';
 import 'theme/app_theme.dart';
 
 class KontaApp extends StatelessWidget {
@@ -18,6 +22,15 @@ class KontaApp extends StatelessWidget {
       builder: (_, mode, __) => MaterialApp.router(
         title: 'Konta',
         debugShowCheckedModeBanner: false,
+        locale: const Locale('pt', 'BR'),
+        localizationsDelegates: const [
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        supportedLocales: const [
+          Locale('pt', 'BR'),
+        ],
         theme: lightTheme,
         darkTheme: darkTheme,
         themeMode: mode,
@@ -29,14 +42,28 @@ class KontaApp extends StatelessWidget {
 
 final _router = GoRouter(
   initialLocation: '/',
+  redirect: (context, state) {
+    final accepted = DatabaseService.getSettings().privacyAccepted;
+    final isPrivacy = state.uri.path == '/privacy-policy';
+    if (!accepted && !isPrivacy) return '/privacy-policy';
+    return null;
+  },
   routes: [
+    GoRoute(
+      path: '/privacy-policy',
+      builder: (_, state) {
+        final viewOnly = state.uri.queryParameters['view'] == 'true';
+        return PrivacyPolicyScreen(viewOnly: viewOnly);
+      },
+    ),
     ShellRoute(
       builder: (context, state, child) => _Shell(child: child),
       routes: [
         GoRoute(path: '/', builder: (_, __) => const DashboardScreen()),
         GoRoute(
           path: '/transactions',
-          builder: (_, state) => TransactionsScreen(initialMonth: state.extra as DateTime?),
+          builder: (_, state) =>
+              TransactionsScreen(initialMonth: state.extra as DateTime?),
         ),
         GoRoute(path: '/calendar', builder: (_, __) => const CalendarScreen()),
         GoRoute(path: '/history', builder: (_, __) => const HistoryScreen()),
@@ -58,7 +85,13 @@ class _Shell extends StatefulWidget {
 class _ShellState extends State<_Shell> {
   int _currentIndex = 0;
 
-  static const _routes = ['/', '/transactions', '/calendar', '/history', '/reservas'];
+  static const _routes = [
+    '/',
+    '/transactions',
+    '/calendar',
+    '/history',
+    '/reservas'
+  ];
 
   @override
   void didChangeDependencies() {
@@ -72,7 +105,15 @@ class _ShellState extends State<_Shell> {
 
   void _onTap(int index) {
     setState(() => _currentIndex = index);
-    context.go(_routes[index]);
+    final route = _routes[index];
+    if (route == '/') {
+      MonthSelectionService.setActiveMonth(DateTime.now());
+      context.go(route);
+    } else if (route == '/transactions') {
+      context.go(route, extra: MonthSelectionService.activeMonth.value);
+    } else {
+      context.go(route);
+    }
   }
 
   @override
@@ -87,11 +128,26 @@ class _ShellState extends State<_Shell> {
           currentIndex: _currentIndex,
           onTap: _onTap,
           items: const [
-            BottomNavigationBarItem(icon: Icon(Icons.home_outlined), activeIcon: Icon(Icons.home), label: 'Início'),
-            BottomNavigationBarItem(icon: Icon(Icons.list_outlined), activeIcon: Icon(Icons.list), label: 'Lançamentos'),
-            BottomNavigationBarItem(icon: Icon(Icons.calendar_month_outlined), activeIcon: Icon(Icons.calendar_month), label: 'Calendário'),
-            BottomNavigationBarItem(icon: Icon(Icons.bar_chart_outlined), activeIcon: Icon(Icons.bar_chart), label: 'Histórico'),
-            BottomNavigationBarItem(icon: Icon(Icons.savings_outlined), activeIcon: Icon(Icons.savings), label: 'Reservas'),
+            BottomNavigationBarItem(
+                icon: Icon(Icons.home_outlined),
+                activeIcon: Icon(Icons.home),
+                label: 'Início'),
+            BottomNavigationBarItem(
+                icon: Icon(Icons.list_outlined),
+                activeIcon: Icon(Icons.list),
+                label: 'Lançamentos'),
+            BottomNavigationBarItem(
+                icon: Icon(Icons.calendar_month_outlined),
+                activeIcon: Icon(Icons.calendar_month),
+                label: 'Calendário'),
+            BottomNavigationBarItem(
+                icon: Icon(Icons.bar_chart_outlined),
+                activeIcon: Icon(Icons.bar_chart),
+                label: 'Histórico'),
+            BottomNavigationBarItem(
+                icon: Icon(Icons.savings_outlined),
+                activeIcon: Icon(Icons.savings),
+                label: 'Reservas'),
           ],
         ),
       ),

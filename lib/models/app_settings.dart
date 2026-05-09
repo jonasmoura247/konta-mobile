@@ -25,6 +25,9 @@ class AppSettings extends HiveObject {
   @HiveField(6)
   late bool goalsEnabled;
 
+  @HiveField(7)
+  late bool privacyAccepted;
+
   AppSettings({
     this.currency = 'BRL',
     this.theme = 'dark',
@@ -33,5 +36,6 @@ class AppSettings extends HiveObject {
     List<String>? familyNames,
     this.carryoverMode = false,
     this.goalsEnabled = false,
+    this.privacyAccepted = false,
   }) : familyNames = familyNames ?? ['Eu', 'Parceiro(a)'];
 }

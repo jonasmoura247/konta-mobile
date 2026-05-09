@@ -9,6 +9,8 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  flutter_localizations:
+    sdk: flutter
 
   # Banco de dados local
   hive: ^2.2.3
@@ -28,7 +30,7 @@ dependencies:
   flutter_riverpod: ^2.6.1
 
   # Formatação de datas e moeda
-  intl: ^0.19.0
+  intl: ^0.20.2
 
   # Importar/exportar arquivos
   file_picker: ^8.1.6

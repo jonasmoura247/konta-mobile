@@ -43,6 +43,9 @@ class Transaction extends HiveObject {
   @HiveField(12)
   late DateTime createdAt;
 
+  @HiveField(13)
+  String? subscriptionSeriesId;
+
   Transaction({
     required this.id,
     required this.groupId,
@@ -57,6 +60,7 @@ class Transaction extends HiveObject {
     this.familyMember,
     this.cancelledFrom,
     required this.createdAt,
+    this.subscriptionSeriesId,
   });
 
   factory Transaction.fromJson(Map<String, dynamic> json) => Transaction(
@@ -75,6 +79,7 @@ class Transaction extends HiveObject {
             ? DateTime.parse(json['cancelledFrom'] as String)
             : null,
         createdAt: DateTime.parse(json['createdAt'] as String),
+        subscriptionSeriesId: json['subscriptionSeriesId'] as String?,
       );
 
   Map<String, dynamic> toJson() => {
@@ -91,5 +96,6 @@ class Transaction extends HiveObject {
         'familyMember': familyMember,
         'cancelledFrom': cancelledFrom?.toIso8601String().split('T').first,
         'createdAt': createdAt.toIso8601String(),
+        'subscriptionSeriesId': subscriptionSeriesId,
       };
 }

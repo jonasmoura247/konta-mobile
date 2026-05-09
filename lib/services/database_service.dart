@@ -19,7 +19,8 @@ class DatabaseService {
   static Box<AppSettings> get settingsBox => Hive.box<AppSettings>('settings');
   static Box<String> get metaBox => Hive.box<String>('meta');
   static Box<Reserve> get reservesBox => Hive.box<Reserve>('reserves');
-  static Box<ReserveSnapshot> get snapshotsBox => Hive.box<ReserveSnapshot>('reserve_snapshots');
+  static Box<ReserveSnapshot> get snapshotsBox =>
+      Hive.box<ReserveSnapshot>('reserve_snapshots');
   static Box<Reminder> get remindersBox => Hive.box<Reminder>('reminders');
   static Box<Goal> get goalsBox => Hive.box<Goal>('goals');
 
@@ -30,8 +31,10 @@ class DatabaseService {
     return List<Map<String, dynamic>>.from(jsonDecode(json) as List);
   }
 
-  static Future<void> saveCustomCategories(List<Map<String, dynamic>> cats) async {
+  static Future<void> saveCustomCategories(
+      List<Map<String, dynamic>> cats) async {
     await metaBox.put('custom_categories', jsonEncode(cats));
+    _notify();
   }
 
   // --- META: Custom Banks ---
@@ -43,6 +46,76 @@ class DatabaseService {
 
   static Future<void> saveCustomBanks(List<Map<String, dynamic>> banks) async {
     await metaBox.put('custom_banks', jsonEncode(banks));
+    _notify();
+  }
+
+  // --- META: Hidden Banks ---
+
+  static const _defaultHiddenBanks = [
+    'bradesco', 'bb', 'santander', 'sicoob', 'sicredi', 'btg', 'safra',
+    'c6', 'neon', 'next', 'picpay', 'pagbank', 'mercadopago', 'stone', 'xp', 'will',
+  ];
+
+  static List<String> getHiddenBankIds() {
+    final raw = metaBox.get('hidden_banks');
+    if (raw == null) return List.from(_defaultHiddenBanks);
+    return List<String>.from(jsonDecode(raw) as List);
+  }
+
+  static Future<void> saveHiddenBankIds(List<String> ids) async {
+    await metaBox.put('hidden_banks', jsonEncode(ids));
+    _notify();
+  }
+
+  // --- META: Hidden Categories ---
+
+  static List<String> getHiddenCategoryIds() {
+    final raw = metaBox.get('hidden_categories');
+    if (raw == null) return [];
+    return List<String>.from(jsonDecode(raw) as List);
+  }
+
+  static Future<void> saveHiddenCategoryIds(List<String> ids) async {
+    await metaBox.put('hidden_categories', jsonEncode(ids));
+    _notify();
+  }
+
+  static dynamic _keyById<T>(
+      Box<T> box, String id, String Function(T item) getId) {
+    for (final key in box.keys) {
+      final item = box.get(key);
+      if (item != null && getId(item) == id) return key;
+    }
+    return null;
+  }
+
+  static Future<void> _putById<T>(
+    Box<T> box,
+    String id,
+    T value,
+    String Function(T item) getId,
+  ) async {
+    if (value is HiveObject && value.isInBox) {
+      await value.save();
+      return;
+    }
+    final key = _keyById(box, id, getId);
+    if (key == null) {
+      await box.add(value);
+    } else {
+      await box.put(key, value);
+    }
+  }
+
+  static Future<void> _deleteById<T>(
+    Box<T> box,
+    String id,
+    String Function(T item) getId,
+  ) async {
+    final key = _keyById(box, id, getId);
+    if (key != null) {
+      await box.delete(key);
+    }
   }
 
   // --- SETTINGS ---
@@ -62,27 +135,46 @@ class DatabaseService {
     } else {
       await settingsBox.putAt(0, settings);
     }
+    _notify();
   }
 
   // --- TRANSACTIONS ---
 
   static List<Transaction> getAllTransactions() => txBox.values.toList();
 
-  static Future<void> addTransaction(Transaction t) => txBox.add(t);
+  static Future<void> addTransaction(Transaction t) async {
+    await txBox.add(t);
+    _notify();
+  }
 
-  static Future<void> updateTransaction(Transaction t) => t.save();
+  static Future<void> updateTransaction(Transaction t) async {
+    await _putById(txBox, t.id, t, (item) => item.id);
+    _notify();
+  }
 
-  static Future<void> deleteTransaction(Transaction t) => t.delete();
+  static Future<void> deleteTransaction(Transaction t) async {
+    await _deleteById(txBox, t.id, (item) => item.id);
+    _notify();
+  }
 
   // --- INCOMES ---
 
   static List<Income> getAllIncomes() => incomeBox.values.toList();
 
-  static Future<void> addIncome(Income i) => incomeBox.add(i);
+  static Future<void> addIncome(Income i) async {
+    await incomeBox.add(i);
+    _notify();
+  }
 
-  static Future<void> updateIncome(Income i) => i.save();
+  static Future<void> updateIncome(Income i) async {
+    await _putById(incomeBox, i.id, i, (item) => item.id);
+    _notify();
+  }
 
-  static Future<void> deleteIncome(Income i) => i.delete();
+  static Future<void> deleteIncome(Income i) async {
+    await _deleteById(incomeBox, i.id, (item) => item.id);
+    _notify();
+  }
 
   // --- RESERVES ---
 
@@ -97,29 +189,34 @@ class DatabaseService {
       date: r.date,
       type: r.type,
     ));
+    _notify();
   }
 
   static Future<void> updateReserve(Reserve r) async {
-    await r.save();
+    await _putById(reservesBox, r.id, r, (item) => item.id);
     await snapshotsBox.add(ReserveSnapshot(
       reserveId: r.id,
       amount: r.amount,
       date: DateTime.now(),
       type: r.type,
     ));
+    _notify();
   }
 
   static Future<void> deleteReserve(Reserve r) async {
-    final toDelete = snapshotsBox.values.where((s) => s.reserveId == r.id).toList();
+    final toDelete =
+        snapshotsBox.values.where((s) => s.reserveId == r.id).toList();
     for (final s in toDelete) {
       await s.delete();
     }
-    await r.delete();
+    await _deleteById(reservesBox, r.id, (item) => item.id);
+    _notify();
   }
 
   // --- RESERVE SNAPSHOTS ---
 
-  static List<ReserveSnapshot> getAllSnapshots() => snapshotsBox.values.toList();
+  static List<ReserveSnapshot> getAllSnapshots() =>
+      snapshotsBox.values.toList();
 
   // --- REMINDERS ---
 
@@ -139,21 +236,39 @@ class DatabaseService {
       });
   }
 
-  static Future<void> addReminder(Reminder r) => remindersBox.add(r);
+  static Future<void> addReminder(Reminder r) async {
+    await remindersBox.add(r);
+    _notify();
+  }
 
-  static Future<void> updateReminder(Reminder r) => r.save();
+  static Future<void> updateReminder(Reminder r) async {
+    await _putById(remindersBox, r.id, r, (item) => item.id);
+    _notify();
+  }
 
-  static Future<void> deleteReminder(Reminder r) => r.delete();
+  static Future<void> deleteReminder(Reminder r) async {
+    await _deleteById(remindersBox, r.id, (item) => item.id);
+    _notify();
+  }
 
   // --- GOALS ---
 
   static List<Goal> getAllGoals() => goalsBox.values.toList();
 
-  static Future<void> addGoal(Goal g) => goalsBox.add(g);
+  static Future<void> addGoal(Goal g) async {
+    await goalsBox.add(g);
+    _notify();
+  }
 
-  static Future<void> updateGoal(Goal g) => g.save();
+  static Future<void> updateGoal(Goal g) async {
+    await _putById(goalsBox, g.id, g, (item) => item.id);
+    _notify();
+  }
 
-  static Future<void> deleteGoal(Goal g) => g.delete();
+  static Future<void> deleteGoal(Goal g) async {
+    await _deleteById(goalsBox, g.id, (item) => item.id);
+    _notify();
+  }
 
   // --- EXPORT ---
 
@@ -200,6 +315,10 @@ class DatabaseService {
   static Future<void> clearAll() async {
     await txBox.clear();
     await incomeBox.clear();
+    await reservesBox.clear();
+    await snapshotsBox.clear();
+    await remindersBox.clear();
+    await goalsBox.clear();
     _notify();
   }
 }

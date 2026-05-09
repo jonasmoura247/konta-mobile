@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../models/bank.dart';
 import '../models/category.dart';
 import '../theme/app_theme.dart';
 import '../utils/formatters.dart';
@@ -70,17 +71,23 @@ class TransactionCard extends StatelessWidget {
                     runSpacing: 4,
                     children: [
                       _Badge(label: cat.name, color: cat.color),
-                      _Badge(label: groupLabel(t.groupId), color: AppColors.accent),
+                      _Badge(
+                          label: groupLabel(t.groupId),
+                          color: AppColors.accent),
                       if (t.groupId == 'parcelamento')
                         _Badge(
-                          label: '${occurrence.installmentIndex}/${occurrence.installmentTotal}',
+                          label:
+                              '${occurrence.installmentIndex}/${occurrence.installmentTotal}',
                           color: context.kTextSecondary,
                         ),
                       if (t.bankId != null)
-                        _Badge(label: bankLabel(t.bankId), color: AppColors.neonCyan),
+                        _Badge(
+                            label: getBankById(t.bankId)?.name ?? t.bankId!,
+                            color: AppColors.neonCyan),
                       if (t.familyMode)
                         _Badge(
-                          label: t.familyMember != null && t.familyMember!.isNotEmpty
+                          label: t.familyMember != null &&
+                                  t.familyMember!.isNotEmpty
                               ? '👨‍👩‍👧 ${t.familyMember}'
                               : '👨‍👩‍👧 Família',
                           color: AppColors.warning,
@@ -109,15 +116,24 @@ class TransactionCard extends StatelessWidget {
                 PopupMenuButton<String>(
                   padding: EdgeInsets.zero,
                   iconSize: 18,
-                  icon: Icon(Icons.more_vert, color: context.kTextSecondary, size: 18),
+                  icon: Icon(Icons.more_vert,
+                      color: context.kTextSecondary, size: 18),
                   color: context.kCard,
                   onSelected: (v) {
-                    if (v == 'edit') onEdit?.call();
-                    if (v == 'delete') onDelete?.call();
+                    Future<void>.delayed(const Duration(milliseconds: 180), () {
+                      if (v == 'edit') onEdit?.call();
+                      if (v == 'delete') onDelete?.call();
+                    });
                   },
                   itemBuilder: (_) => [
-                    PopupMenuItem(value: 'edit', child: Text('Editar', style: TextStyle(color: context.kTextPrimary))),
-                    const PopupMenuItem(value: 'delete', child: Text('Excluir', style: TextStyle(color: AppColors.expense))),
+                    PopupMenuItem(
+                        value: 'edit',
+                        child: Text('Editar',
+                            style: TextStyle(color: context.kTextPrimary))),
+                    const PopupMenuItem(
+                        value: 'delete',
+                        child: Text('Excluir',
+                            style: TextStyle(color: AppColors.expense))),
                   ],
                 ),
               ],
@@ -143,7 +159,8 @@ class _Badge extends StatelessWidget {
         ),
         child: Text(
           label,
-          style: TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.w600),
+          style: TextStyle(
+              color: color, fontSize: 10, fontWeight: FontWeight.w600),
         ),
       );
 }

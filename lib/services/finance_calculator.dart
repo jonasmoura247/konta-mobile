@@ -26,6 +26,8 @@ class MonthSummary {
   final Map<String, double> byGroup;
   final Map<String, double> byBank;
   final Map<String, double> byDebitCategory;
+  // Total bruto por cartão, sem divisão familiar
+  final Map<String, double> byBankGross;
 
   const MonthSummary({
     required this.totalExpenses,
@@ -37,6 +39,7 @@ class MonthSummary {
     required this.byBank,
     required this.byDebitCategory,
     this.carryover = 0.0,
+    this.byBankGross = const {},
   });
 }
 
@@ -53,6 +56,8 @@ class YearSummary {
   final double monthlyAverage;
   final DateTime? bestMonth;
   final DateTime? worstMonth;
+  final DateTime? highestIncomeMonth;
+  final DateTime? lowestIncomeMonth;
 
   const YearSummary({
     required this.year,
@@ -67,6 +72,8 @@ class YearSummary {
     required this.monthlyAverage,
     this.bestMonth,
     this.worstMonth,
+    this.highestIncomeMonth,
+    this.lowestIncomeMonth,
   });
 }
 
@@ -102,6 +109,7 @@ class FinanceCalculator {
   }) {
     final result = <TransactionOccurrence>[];
     final divisor = familyCount > 1 ? familyCount.toDouble() : 1.0;
+    final targetMonth = DateTime(yearMonth.year, yearMonth.month);
 
     for (final t in transactions) {
       if (t.groupId == 'debito') continue;
@@ -110,7 +118,8 @@ class FinanceCalculator {
       switch (t.groupId) {
         case 'avista':
           if (isSameMonth(t.startDate, yearMonth)) {
-            final amount = t.familyMode ? t.totalAmount / divisor : t.totalAmount;
+            final amount =
+                t.familyMode ? t.totalAmount / divisor : t.totalAmount;
             result.add(TransactionOccurrence(transaction: t, amount: amount));
           }
 
@@ -128,17 +137,21 @@ class FinanceCalculator {
           }
 
         case 'assinatura':
-          final started = !yearMonth.isBefore(DateTime(t.startDate.year, t.startDate.month));
+          final started = !targetMonth
+              .isBefore(DateTime(t.startDate.year, t.startDate.month));
           final notCancelled = t.cancelledFrom == null ||
-              yearMonth.isBefore(DateTime(t.cancelledFrom!.year, t.cancelledFrom!.month));
+              targetMonth.isBefore(
+                  DateTime(t.cancelledFrom!.year, t.cancelledFrom!.month));
           if (started && notCancelled) {
-            final amount = t.familyMode ? t.totalAmount / divisor : t.totalAmount;
+            final amount =
+                t.familyMode ? t.totalAmount / divisor : t.totalAmount;
             result.add(TransactionOccurrence(transaction: t, amount: amount));
           }
       }
     }
 
-    result.sort((a, b) => b.transaction.startDate.compareTo(a.transaction.startDate));
+    result.sort(
+        (a, b) => b.transaction.startDate.compareTo(a.transaction.startDate));
     return result;
   }
 
@@ -160,7 +173,8 @@ class FinanceCalculator {
       result.add(TransactionOccurrence(transaction: t, amount: amount));
     }
 
-    result.sort((a, b) => b.transaction.startDate.compareTo(a.transaction.startDate));
+    result.sort(
+        (a, b) => b.transaction.startDate.compareTo(a.transaction.startDate));
     return result;
   }
 
@@ -182,11 +196,15 @@ class FinanceCalculator {
     bool familyOnly = false,
     double carryover = 0.0,
   }) {
-    final occurrences = getOccurrencesForMonth(transactions, yearMonth, familyCount, familyOnly: familyOnly);
+    final occurrences = getOccurrencesForMonth(
+        transactions, yearMonth, familyCount,
+        familyOnly: familyOnly);
     final totalExpenses = occurrences.fold(0.0, (s, o) => s + o.amount);
     final totalIncome = getIncomeForMonth(incomes, yearMonth);
 
-    final debitOccurrences = getDebitOccurrencesForMonth(transactions, yearMonth, familyCount, familyOnly: familyOnly);
+    final debitOccurrences = getDebitOccurrencesForMonth(
+        transactions, yearMonth, familyCount,
+        familyOnly: familyOnly);
     final totalDebit = debitOccurrences.fold(0.0, (s, o) => s + o.amount);
 
     final byCategory = <String, double>{};
@@ -195,14 +213,25 @@ class FinanceCalculator {
     final byDebitCategory = <String, double>{};
 
     for (final o in occurrences) {
-      byCategory[o.transaction.categoryId] = (byCategory[o.transaction.categoryId] ?? 0) + o.amount;
-      byGroup[o.transaction.groupId] = (byGroup[o.transaction.groupId] ?? 0) + o.amount;
+      byCategory[o.transaction.categoryId] =
+          (byCategory[o.transaction.categoryId] ?? 0) + o.amount;
+      byGroup[o.transaction.groupId] =
+          (byGroup[o.transaction.groupId] ?? 0) + o.amount;
       final bank = o.transaction.bankId ?? 'sem_banco';
       byBank[bank] = (byBank[bank] ?? 0) + o.amount;
     }
 
     for (final o in debitOccurrences) {
-      byDebitCategory[o.transaction.categoryId] = (byDebitCategory[o.transaction.categoryId] ?? 0) + o.amount;
+      byDebitCategory[o.transaction.categoryId] =
+          (byDebitCategory[o.transaction.categoryId] ?? 0) + o.amount;
+    }
+
+    // Total bruto por cartão sem divisão familiar
+    final byBankGross = <String, double>{};
+    final grossOccurrences = getOccurrencesForMonth(transactions, yearMonth, 1, familyOnly: false);
+    for (final o in grossOccurrences) {
+      final bank = o.transaction.bankId ?? 'sem_banco';
+      byBankGross[bank] = (byBankGross[bank] ?? 0) + o.amount;
     }
 
     return MonthSummary(
@@ -215,6 +244,7 @@ class FinanceCalculator {
       byGroup: byGroup,
       byBank: byBank,
       byDebitCategory: byDebitCategory,
+      byBankGross: byBankGross,
     );
   }
 
@@ -224,7 +254,8 @@ class FinanceCalculator {
     DateTime yearMonth,
     int familyCount,
   ) {
-    final raw = getOccurrencesForMonth(transactions, yearMonth, 1);
+    final raw =
+        getOccurrencesForMonth(transactions, yearMonth, 1, familyOnly: true);
     return raw.fold(0.0, (s, o) => s + o.amount);
   }
 
@@ -233,7 +264,10 @@ class FinanceCalculator {
       final offset = n - 1 - i;
       var month = base.month - offset;
       var year = base.year;
-      while (month <= 0) { month += 12; year--; }
+      while (month <= 0) {
+        month += 12;
+        year--;
+      }
       return DateTime(year, month);
     });
   }
@@ -263,11 +297,13 @@ class FinanceCalculator {
     bool familyOnly = false,
   }) {
     final now = DateTime.now();
-    final lastMonth = (untilMonth ?? (year == now.year ? now.month : 12)).clamp(1, 12);
+    final lastMonth =
+        (untilMonth ?? (year == now.year ? now.month : 12)).clamp(1, 12);
 
     final months = List.generate(12, (i) => DateTime(year, i + 1));
     final summaries = months
-        .map((m) => summarize(transactions, incomes, m, familyCount, familyOnly: familyOnly))
+        .map((m) => summarize(transactions, incomes, m, familyCount,
+            familyOnly: familyOnly))
         .toList();
 
     double totalIncome = 0;
@@ -288,10 +324,15 @@ class FinanceCalculator {
     DateTime? worstMonth;
     double? bestBalance;
     double? worstBalance;
+    DateTime? highestIncomeMonth;
+    DateTime? lowestIncomeMonth;
+    double? maxIncome;
+    double? minIncome;
 
     for (int i = 0; i < lastMonth; i++) {
       final s = summaries[i];
-      final hasData = s.totalIncome > 0 || s.totalExpenses > 0 || s.totalDebit > 0;
+      final hasData =
+          s.totalIncome > 0 || s.totalExpenses > 0 || s.totalDebit > 0;
       if (!hasData) continue;
       final b = s.totalIncome - s.totalExpenses - s.totalDebit;
       if (bestBalance == null || b > bestBalance) {
@@ -301,6 +342,16 @@ class FinanceCalculator {
       if (worstBalance == null || b < worstBalance) {
         worstBalance = b;
         worstMonth = months[i];
+      }
+      if (s.totalIncome > 0) {
+        if (maxIncome == null || s.totalIncome > maxIncome) {
+          maxIncome = s.totalIncome;
+          highestIncomeMonth = months[i];
+        }
+        if (minIncome == null || s.totalIncome < minIncome) {
+          minIncome = s.totalIncome;
+          lowestIncomeMonth = months[i];
+        }
       }
     }
 
@@ -317,6 +368,8 @@ class FinanceCalculator {
       monthlyAverage: monthlyAverage,
       bestMonth: bestMonth,
       worstMonth: worstMonth,
+      highestIncomeMonth: highestIncomeMonth,
+      lowestIncomeMonth: lowestIncomeMonth,
     );
   }
 
@@ -330,12 +383,20 @@ class FinanceCalculator {
     bool familyOnly = false,
   }) {
     final current = summarizeYear(
-      transactions, incomes, currentYear, familyCount,
-      untilMonth: untilMonth, familyOnly: familyOnly,
+      transactions,
+      incomes,
+      currentYear,
+      familyCount,
+      untilMonth: untilMonth,
+      familyOnly: familyOnly,
     );
     final previous = summarizeYear(
-      transactions, incomes, previousYear, familyCount,
-      untilMonth: current.untilMonth, familyOnly: familyOnly,
+      transactions,
+      incomes,
+      previousYear,
+      familyCount,
+      untilMonth: current.untilMonth,
+      familyOnly: familyOnly,
     );
 
     double safePct(double a, double b) => b == 0 ? 0 : ((a - b) / b) * 100;
@@ -357,8 +418,12 @@ class FinanceCalculator {
     List<Income> incomes,
   ) {
     final years = <int>{};
-    for (final t in transactions) { years.add(t.startDate.year); }
-    for (final i in incomes) { years.add(i.date.year); }
+    for (final t in transactions) {
+      years.add(t.startDate.year);
+    }
+    for (final i in incomes) {
+      years.add(i.date.year);
+    }
     return years.toList()..sort();
   }
 
@@ -376,7 +441,8 @@ class FinanceCalculator {
     double accumulated = 0.0;
     for (final month in prevMonths) {
       final s = summarize(transactions, incomes, month, familyCount);
-      accumulated = s.totalIncome + accumulated - s.totalExpenses - s.totalDebit;
+      accumulated =
+          s.totalIncome + accumulated - s.totalExpenses - s.totalDebit;
     }
     return accumulated;
   }

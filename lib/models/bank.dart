@@ -14,13 +14,37 @@ Color _hexToColor(String hex) {
   return const Color(0xFF546E7A);
 }
 
-String colorToHex(Color c) =>
-    '#${c.red.toRadixString(16).padLeft(2, '0')}${c.green.toRadixString(16).padLeft(2, '0')}${c.blue.toRadixString(16).padLeft(2, '0')}'.toUpperCase();
+String colorToHex(Color c) {
+  int channel(double value) => (value * 255).round().clamp(0, 255);
+  return '#${channel(c.r).toRadixString(16).padLeft(2, '0')}'
+          '${channel(c.g).toRadixString(16).padLeft(2, '0')}'
+          '${channel(c.b).toRadixString(16).padLeft(2, '0')}'
+      .toUpperCase();
+}
 
 const List<BankDef> kDefaultBanks = [
-  BankDef(id: 'itau',   name: 'Itaú',   color: Color(0xFF006CA7)),
+  // Bancos tradicionais
+  BankDef(id: 'itau', name: 'Itaú', color: Color(0xFF006CA7)),
+  BankDef(id: 'bradesco', name: 'Bradesco', color: Color(0xFFCC092F)),
+  BankDef(id: 'caixa', name: 'Caixa', color: Color(0xFF005CA9)),
+  BankDef(id: 'bb', name: 'Banco do Brasil', color: Color(0xFFF7C302)),
+  BankDef(id: 'santander', name: 'Santander', color: Color(0xFFEC0000)),
+  BankDef(id: 'sicoob', name: 'Sicoob', color: Color(0xFF008542)),
+  BankDef(id: 'sicredi', name: 'Sicredi', color: Color(0xFF04A85B)),
+  BankDef(id: 'btg', name: 'BTG Pactual', color: Color(0xFF004C97)),
+  BankDef(id: 'safra', name: 'Safra', color: Color(0xFF01358C)),
+  // Bancos digitais e fintechs
   BankDef(id: 'nubank', name: 'Nubank', color: Color(0xFF820AD1)),
-  BankDef(id: 'inter',  name: 'Inter',  color: Color(0xFFFF6B00)),
+  BankDef(id: 'inter', name: 'Inter', color: Color(0xFFFF6B00)),
+  BankDef(id: 'c6', name: 'C6 Bank', color: Color(0xFF505050)),
+  BankDef(id: 'neon', name: 'Neon', color: Color(0xFF2B47FC)),
+  BankDef(id: 'next', name: 'Next', color: Color(0xFF00C06C)),
+  BankDef(id: 'picpay', name: 'PicPay', color: Color(0xFF11C76F)),
+  BankDef(id: 'pagbank', name: 'PagBank', color: Color(0xFF03A64A)),
+  BankDef(id: 'mercadopago', name: 'Mercado Pago', color: Color(0xFF00B4E6)),
+  BankDef(id: 'stone', name: 'Stone', color: Color(0xFF00A868)),
+  BankDef(id: 'xp', name: 'XP', color: Color(0xFF00CC66)),
+  BankDef(id: 'will', name: 'Will Bank', color: Color(0xFFF9C01D)),
 ];
 
 List<BankDef> getAllBanks() {
@@ -38,5 +62,11 @@ List<BankDef> getAllBanks() {
 
 BankDef? getBankById(String? id) {
   if (id == null) return null;
-  return getAllBanks().firstWhere((b) => b.id == id, orElse: () => BankDef(id: id, name: id, color: Colors.grey));
+  return getAllBanks().firstWhere((b) => b.id == id,
+      orElse: () => BankDef(id: id, name: id, color: Colors.grey));
+}
+
+List<BankDef> getVisibleBanks() {
+  final hidden = DatabaseService.getHiddenBankIds().toSet();
+  return getAllBanks().where((b) => !hidden.contains(b.id)).toList();
 }

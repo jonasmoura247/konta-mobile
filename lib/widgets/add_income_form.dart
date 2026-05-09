@@ -7,12 +7,14 @@ import '../utils/formatters.dart';
 
 class AddIncomeForm extends StatefulWidget {
   final Income? editing;
+  final DateTime? initialDate;
   final void Function(Income) onSave;
   final VoidCallback? onDelete;
 
   const AddIncomeForm({
     super.key,
     this.editing,
+    this.initialDate,
     required this.onSave,
     this.onDelete,
   });
@@ -25,7 +27,7 @@ class _AddIncomeFormState extends State<AddIncomeForm> {
   final _formKey = GlobalKey<FormState>();
   final _descCtrl = TextEditingController();
   final _amountCtrl = TextEditingController();
-  DateTime _date = DateTime.now();
+  late DateTime _date;
   bool _recurring = false;
 
   @override
@@ -37,6 +39,8 @@ class _AddIncomeFormState extends State<AddIncomeForm> {
       _amountCtrl.text = e.amount.toStringAsFixed(2).replaceAll('.', ',');
       _date = e.date;
       _recurring = e.recurring;
+    } else {
+      _date = widget.initialDate ?? DateTime.now();
     }
   }
 

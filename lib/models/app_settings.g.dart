@@ -20,14 +20,14 @@ class AppSettingsAdapter extends TypeAdapter<AppSettings> {
       familyNames: (fields[4] as List?)?.cast<String>(),
       carryoverMode: fields[5] as bool? ?? false,
       goalsEnabled: fields[6] as bool? ?? false,
-      // fields[7] e fields[8] (goalName/goalTarget antigos) são ignorados
+      privacyAccepted: fields[7] is bool ? (fields[7] as bool) : false,
     );
   }
 
   @override
   void write(BinaryWriter writer, AppSettings obj) {
     writer
-      ..writeByte(7)
+      ..writeByte(8)
       ..writeByte(0)
       ..write(obj.currency)
       ..writeByte(1)
@@ -41,7 +41,9 @@ class AppSettingsAdapter extends TypeAdapter<AppSettings> {
       ..writeByte(5)
       ..write(obj.carryoverMode)
       ..writeByte(6)
-      ..write(obj.goalsEnabled);
+      ..write(obj.goalsEnabled)
+      ..writeByte(7)
+      ..write(obj.privacyAccepted);
   }
 
   @override

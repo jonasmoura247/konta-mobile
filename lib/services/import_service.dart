@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 import 'package:file_picker/file_picker.dart';
-import 'package:path_provider/path_provider.dart';
 import 'database_service.dart';
 
 class ImportService {
@@ -26,11 +26,14 @@ class ImportService {
     return DatabaseService.importFromJson(jsonString);
   }
 
-  static Future<String> exportJsonToDownloads() async {
+  static Future<String?> exportJsonWithPicker() async {
     final jsonString = DatabaseService.exportToJson();
-    final dir = await getExternalStorageDirectory() ?? await getApplicationDocumentsDirectory();
-    final file = File('${dir.path}/farmas-dados-backup.json');
-    await file.writeAsString(jsonString);
-    return file.path;
+    final bytes = Uint8List.fromList(utf8.encode(jsonString));
+
+    return FilePicker.platform.saveFile(
+      dialogTitle: 'Salvar backup',
+      fileName: 'konta.json',
+      bytes: bytes,
+    );
   }
 }
