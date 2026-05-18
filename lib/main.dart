@@ -12,6 +12,7 @@ import 'models/goal.dart';
 import 'models/card_due_date.dart';
 import 'services/database_service.dart';
 import 'services/notification_service.dart';
+import 'services/backup_service.dart';
 import 'services/seed_service.dart';
 import 'theme/app_theme.dart';
 import 'app.dart';
@@ -45,6 +46,7 @@ void main() async {
 
   await SeedService.seedIfEmpty();
   await NotificationService.init();
+  BackupService.init();
 
   final settings = DatabaseService.getSettings();
   themeNotifier.value = settings.theme == 'light' ? ThemeMode.light : ThemeMode.dark;

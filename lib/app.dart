@@ -9,6 +9,7 @@ import 'screens/settings_screen.dart';
 import 'screens/reservas_screen.dart';
 import 'screens/privacy_policy_screen.dart';
 import 'services/database_service.dart';
+import 'services/backup_service.dart';
 import 'services/month_selection_service.dart';
 import 'theme/app_theme.dart';
 
@@ -124,6 +125,96 @@ class _Shell extends StatefulWidget {
 
 class _ShellState extends State<_Shell> {
   int _currentIndex = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _checkFirstRunBackup());
+  }
+
+  Future<void> _checkFirstRunBackup() async {
+    if (!mounted) return;
+    final config = BackupService.getConfig();
+    if (config.firstRunDone) return;
+
+    // Marca como feito antes de mostrar, para não repetir se o app fechar
+    await BackupService.saveConfig(config.copyWith(firstRunDone: true));
+
+    if (!mounted) return;
+    _showBackupSetupDialog();
+  }
+
+  void _showBackupSetupDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: ctx.kCard,
+        title: Text('Backup Automático',
+            style: TextStyle(color: ctx.kTextPrimary)),
+        content: Text(
+          'Deseja configurar uma pasta para salvar backups automáticos do Konta?',
+          style: TextStyle(color: ctx.kTextSecondary),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: Text('Agora não',
+                style: TextStyle(color: ctx.kTextSecondary)),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.of(ctx).pop();
+              await _setupBackupFolder();
+            },
+            child: const Text('Configurar'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _setupBackupFolder() async {
+    final path = await BackupService.selectBackupFolder();
+    if (path == null || !mounted) return;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: ctx.kCard,
+        title: Text('Backup automático',
+            style: TextStyle(color: ctx.kTextPrimary)),
+        content: Text(
+          'Fazer backup a cada salvamento?',
+          style: TextStyle(color: ctx.kTextSecondary),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: Text('Não', style: TextStyle(color: ctx.kTextSecondary)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Sim'),
+          ),
+        ],
+      ),
+    );
+
+    final rules = <BackupRule>[];
+    if (confirmed == true) {
+      rules.add(BackupRule(
+        id: BackupService.newRuleId(),
+        type: BackupRuleType.onSave,
+      ));
+    }
+
+    final current = BackupService.getConfig();
+    await BackupService.saveConfig(current.copyWith(
+      backupFolderPath: path,
+      rules: rules,
+    ));
+  }
 
   static const _routes = [
     '/',

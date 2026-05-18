@@ -5,6 +5,7 @@ import '../models/app_settings.dart';
 import '../models/category.dart';
 import '../models/bank.dart';
 import '../services/database_service.dart';
+import '../services/backup_service.dart';
 import '../services/import_service.dart';
 import '../theme/app_theme.dart';
 import '../utils/privacy_policy_text.dart';
@@ -165,6 +166,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
   late List<String> _hiddenCategoryIds;
   late String _catSortMode; // 'manual', 'alpha', 'usage'
   late List<String> _catOrder; // IDs na ordem manual
+  late BackupConfig _backupConfig;
+  bool _backingUp = false;
 
   @override
   void initState() {
@@ -176,6 +179,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _hiddenCategoryIds = List.from(DatabaseService.getHiddenCategoryIds());
     _catSortMode = DatabaseService.getCategorySortMode();
     _catOrder = List.from(DatabaseService.getCategoryOrder());
+    _backupConfig = BackupService.getConfig();
   }
 
   Future<void> _save() async {
@@ -555,6 +559,204 @@ class _SettingsScreenState extends State<SettingsScreen> {
   void _deleteCustomBank(String id) async {
     _customBanks.removeWhere((b) => b['id'] == id);
     await _saveBanks();
+  }
+
+  // ───────────────── Backup ──────────────────────────────────────────────
+
+  void _reloadBackupConfig() {
+    setState(() => _backupConfig = BackupService.getConfig());
+  }
+
+  Future<void> _selectBackupFolder() async {
+    final path = await BackupService.selectBackupFolder();
+    if (path == null) return;
+    await BackupService.saveConfig(_backupConfig.copyWith(backupFolderPath: path));
+    _reloadBackupConfig();
+  }
+
+  Future<void> _toggleBackupRule(String id, bool enabled) async {
+    final rules = _backupConfig.rules.map((r) {
+      return r.id == id ? r.copyWith(enabled: enabled) : r;
+    }).toList();
+    await BackupService.saveConfig(_backupConfig.copyWith(rules: rules));
+    _reloadBackupConfig();
+  }
+
+  Future<void> _deleteBackupRule(String id) async {
+    final rules = _backupConfig.rules.where((r) => r.id != id).toList();
+    await BackupService.saveConfig(_backupConfig.copyWith(rules: rules));
+    _reloadBackupConfig();
+  }
+
+  Future<void> _addBackupRule() async {
+    BackupRuleType selectedType = BackupRuleType.onSave;
+    TimeOfDay selectedTime = const TimeOfDay(hour: 8, minute: 0);
+    int selectedWeekday = DateTime.monday;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx2, setSt) => AlertDialog(
+          backgroundColor: ctx.kCard,
+          title: Text('Nova Regra', style: TextStyle(color: ctx.kTextPrimary)),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Tipo', style: TextStyle(color: ctx.kTextSecondary, fontSize: 12)),
+                const SizedBox(height: 8),
+                ...BackupRuleType.values
+                    .where((t) => t != BackupRuleType.manual)
+                    .map((t) => RadioListTile<BackupRuleType>(
+                          dense: true,
+                          contentPadding: EdgeInsets.zero,
+                          title: Text(_ruleTypeName(t),
+                              style: TextStyle(
+                                  color: ctx.kTextPrimary, fontSize: 13)),
+                          value: t,
+                          groupValue: selectedType,
+                          activeColor: AppColors.accent,
+                          onChanged: (v) => setSt(() => selectedType = v!),
+                        )),
+                if (selectedType == BackupRuleType.scheduled ||
+                    selectedType == BackupRuleType.weekly) ...[
+                  const SizedBox(height: 12),
+                  if (selectedType == BackupRuleType.weekly) ...[
+                    Text('Dia da semana',
+                        style: TextStyle(color: ctx.kTextSecondary, fontSize: 12)),
+                    const SizedBox(height: 4),
+                    DropdownButton<int>(
+                      value: selectedWeekday,
+                      dropdownColor: ctx.kCard,
+                      style: TextStyle(color: ctx.kTextPrimary),
+                      underline: const SizedBox.shrink(),
+                      items: [
+                        for (int i = 1; i <= 7; i++)
+                          DropdownMenuItem(
+                            value: i,
+                            child: Text(_weekdayName(i)),
+                          ),
+                      ],
+                      onChanged: (v) => setSt(() => selectedWeekday = v!),
+                    ),
+                    const SizedBox(height: 8),
+                  ],
+                  Text('Horário',
+                      style: TextStyle(color: ctx.kTextSecondary, fontSize: 12)),
+                  const SizedBox(height: 4),
+                  GestureDetector(
+                    onTap: () async {
+                      final t = await showTimePicker(
+                        context: ctx2,
+                        initialTime: selectedTime,
+                      );
+                      if (t != null) setSt(() => selectedTime = t);
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: AppColors.accent.withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: AppColors.accent, width: 1),
+                      ),
+                      child: Text(
+                        '${selectedTime.hour.toString().padLeft(2, '0')}:${selectedTime.minute.toString().padLeft(2, '0')}',
+                        style: TextStyle(
+                            color: ctx.kTextPrimary,
+                            fontFamily: 'JetBrainsMono',
+                            fontSize: 16),
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: const Text('Cancelar')),
+            TextButton(
+                onPressed: () => Navigator.pop(ctx, true),
+                child: const Text('Adicionar')),
+          ],
+        ),
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    final newRule = BackupRule(
+      id: BackupService.newRuleId(),
+      type: selectedType,
+      scheduledHour: (selectedType == BackupRuleType.scheduled ||
+              selectedType == BackupRuleType.weekly)
+          ? selectedTime.hour
+          : null,
+      scheduledMinute: (selectedType == BackupRuleType.scheduled ||
+              selectedType == BackupRuleType.weekly)
+          ? selectedTime.minute
+          : null,
+      weekday:
+          selectedType == BackupRuleType.weekly ? selectedWeekday : null,
+    );
+
+    await BackupService.saveConfig(
+        _backupConfig.copyWith(rules: [..._backupConfig.rules, newRule]));
+    _reloadBackupConfig();
+  }
+
+  Future<void> _manualBackup() async {
+    setState(() => _backingUp = true);
+    final messenger = ScaffoldMessenger.of(context);
+    final success = await BackupService.performBackup(_backupConfig);
+    _reloadBackupConfig();
+    setState(() => _backingUp = false);
+    if (!mounted) return;
+    messenger.showSnackBar(SnackBar(
+      content: Text(success ? 'Backup realizado com sucesso!' : 'Erro ao realizar backup. Verifique a pasta configurada.'),
+      backgroundColor: success ? AppColors.income : AppColors.expense,
+    ));
+  }
+
+  String _ruleTypeName(BackupRuleType t) {
+    switch (t) {
+      case BackupRuleType.manual: return 'Manual';
+      case BackupRuleType.onSave: return 'A cada salvamento';
+      case BackupRuleType.scheduled: return 'Horário fixo diário';
+      case BackupRuleType.weekly: return 'Dia da semana';
+    }
+  }
+
+  String _weekdayName(int weekday) {
+    const names = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', 'Domingo'];
+    return names[weekday - 1];
+  }
+
+  String get _backupFolderDisplay {
+    final path = _backupConfig.backupFolderPath;
+    if (path == null || path.isEmpty) return 'Não configurada (usa pasta padrão do app)';
+    if (path.length > 42) return '...${path.substring(path.length - 42)}';
+    return path;
+  }
+
+  IconData _ruleIcon(BackupRuleType type) {
+    switch (type) {
+      case BackupRuleType.onSave: return Icons.save_outlined;
+      case BackupRuleType.scheduled: return Icons.access_time;
+      case BackupRuleType.weekly: return Icons.date_range_outlined;
+      case BackupRuleType.manual: return Icons.touch_app_outlined;
+    }
+  }
+
+  String get _lastBackupDisplay {
+    final last = _backupConfig.lastBackupAt;
+    if (last == null) return 'Nunca';
+    final d = '${last.day.toString().padLeft(2, '0')}/${last.month.toString().padLeft(2, '0')}/${last.year}';
+    final t = '${last.hour.toString().padLeft(2, '0')}:${last.minute.toString().padLeft(2, '0')}';
+    return '$d às $t';
   }
 
   void _toggleBankVisibility(String id) async {
@@ -1035,6 +1237,96 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ],
                 ),
               ),
+            ),
+          ]),
+
+          // ── Backup Automático ──────────────────────────────────────────
+          const SizedBox(height: 20),
+          _SectionTitle('Backup Automático'),
+          _Card(children: [
+            ListTile(
+              leading: const Icon(Icons.folder_outlined, color: AppColors.accent),
+              title: Text('Pasta de backup',
+                  style: TextStyle(color: context.kTextPrimary)),
+              subtitle: Text(_backupFolderDisplay,
+                  style: TextStyle(
+                      color: context.kTextSecondary, fontSize: 11)),
+              trailing: TextButton(
+                onPressed: _selectBackupFolder,
+                child: const Text('Selecionar'),
+              ),
+            ),
+            const Divider(height: 1),
+            ListTile(
+              leading: const Icon(Icons.history, color: AppColors.accent),
+              title: Text('Último backup',
+                  style: TextStyle(color: context.kTextPrimary, fontSize: 13)),
+              subtitle: Text(_lastBackupDisplay,
+                  style: TextStyle(
+                      color: context.kTextSecondary, fontSize: 12)),
+            ),
+            if (_backupConfig.rules.isNotEmpty) ...[
+              const Divider(height: 1),
+              ..._backupConfig.rules.asMap().entries.map((e) {
+                final rule = e.value;
+                return Column(
+                  children: [
+                    if (e.key > 0) const Divider(height: 1),
+                    ListTile(
+                      dense: true,
+                      leading: Icon(_ruleIcon(rule.type),
+                          color: AppColors.accent, size: 20),
+                      title: Text(rule.displayLabel,
+                          style: TextStyle(
+                              color: context.kTextPrimary, fontSize: 13)),
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Switch(
+                            value: rule.enabled,
+                            activeThumbColor: AppColors.accent,
+                            onChanged: (v) => _toggleBackupRule(rule.id, v),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.delete_outline,
+                                size: 18, color: AppColors.expense),
+                            constraints: const BoxConstraints(),
+                            padding: const EdgeInsets.all(4),
+                            onPressed: () => _deleteBackupRule(rule.id),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                );
+              }),
+            ],
+            const Divider(height: 1),
+            ListTile(
+              leading:
+                  const Icon(Icons.add_circle_outline, color: AppColors.accent),
+              title: Text('Adicionar Regra',
+                  style: TextStyle(color: context.kTextPrimary, fontSize: 13)),
+              onTap: _addBackupRule,
+            ),
+          ]),
+          const SizedBox(height: 8),
+          _Card(children: [
+            ListTile(
+              leading: _backingUp
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                          strokeWidth: 2, color: AppColors.accent))
+                  : const Icon(Icons.cloud_done_outlined,
+                      color: AppColors.accent),
+              title: Text('Fazer Backup Agora',
+                  style: TextStyle(color: context.kTextPrimary)),
+              subtitle: Text('Sobrescreve konta_backup.json na pasta escolhida',
+                  style:
+                      TextStyle(color: context.kTextSecondary, fontSize: 12)),
+              onTap: _backingUp ? null : _manualBackup,
             ),
           ]),
 

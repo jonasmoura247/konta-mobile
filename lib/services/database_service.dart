@@ -134,6 +134,15 @@ class DatabaseService {
     // sem _notify() — UI atualiza via setState direto no onReorder
   }
 
+  // --- META: Backup Config ---
+
+  static String? getRawBackupConfig() => metaBox.get('backup_config');
+
+  static Future<void> saveRawBackupConfig(String json) async {
+    await metaBox.put('backup_config', json);
+    // sem _notify() — backup config não afeta cálculos financeiros
+  }
+
   // --- META: App version tracking (changelog banner) ---
 
   static String? getLastSeenVersion() {
