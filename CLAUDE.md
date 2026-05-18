@@ -40,7 +40,10 @@ Antes de implementar qualquer funcionalidade, leia os arquivos relevantes do vau
 
 ## Planos e documentação
 
-Sempre que solicitado para criar um plano, salve em: `C:\Users\Jonas\Desktop\Anotacoes\Konta\Plano\`
+Sempre que solicitado para criar um plano:
+1. Salve em: `C:\Users\Jonas\Desktop\Anotacoes\Konta\Plano\`
+2. Verifique o último número de plano nessa pasta (ex: `5-NOME.md` → próximo é `6-XXXX`)
+3. Use o padrão de nomenclatura: `N-NOME-DESCRITIVO.md` (ex: `1-AUTO-SAVE.md`, `2-INTEGRACAO-DRIVE.md`)
 
 ## Padrões obrigatórios
 
