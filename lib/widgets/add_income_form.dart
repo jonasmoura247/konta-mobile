@@ -4,6 +4,7 @@ import 'package:uuid/uuid.dart';
 import '../models/income.dart';
 import '../theme/app_theme.dart';
 import '../utils/formatters.dart';
+import '../utils/keyboard_restore_mixin.dart';
 
 class AddIncomeForm extends StatefulWidget {
   final Income? editing;
@@ -23,22 +24,31 @@ class AddIncomeForm extends StatefulWidget {
   State<AddIncomeForm> createState() => _AddIncomeFormState();
 }
 
-class _AddIncomeFormState extends State<AddIncomeForm> {
+class _AddIncomeFormState extends State<AddIncomeForm>
+    with WidgetsBindingObserver, KeyboardRestoreMixin {
   final _formKey = GlobalKey<FormState>();
   final _descCtrl = TextEditingController();
   final _amountCtrl = TextEditingController();
+  late FocusNode _descFocus;
+  late FocusNode _amountFocus;
   late DateTime _date;
   bool _recurring = false;
+  bool _isFamilyValue = false;
 
   @override
   void initState() {
     super.initState();
+    _descFocus = FocusNode();
+    _amountFocus = FocusNode();
+    registerFocusNode(_descFocus);
+    registerFocusNode(_amountFocus);
     final e = widget.editing;
     if (e != null) {
       _descCtrl.text = e.description;
       _amountCtrl.text = e.amount.toStringAsFixed(2).replaceAll('.', ',');
       _date = e.date;
       _recurring = e.recurring;
+      _isFamilyValue = e.isFamilyValue;
     } else {
       _date = widget.initialDate ?? DateTime.now();
     }
@@ -48,6 +58,8 @@ class _AddIncomeFormState extends State<AddIncomeForm> {
   void dispose() {
     _descCtrl.dispose();
     _amountCtrl.dispose();
+    _descFocus.dispose();
+    _amountFocus.dispose();
     super.dispose();
   }
 
@@ -62,6 +74,7 @@ class _AddIncomeFormState extends State<AddIncomeForm> {
       amount: amount,
       date: _date,
       recurring: _recurring,
+      isFamilyValue: _isFamilyValue,
     );
     widget.onSave(income);
     Navigator.of(context).pop();
@@ -70,9 +83,9 @@ class _AddIncomeFormState extends State<AddIncomeForm> {
   @override
   Widget build(BuildContext context) {
     return DraggableScrollableSheet(
-      initialChildSize: 0.6,
+      initialChildSize: 0.65,
       minChildSize: 0.4,
-      maxChildSize: 0.85,
+      maxChildSize: 0.9,
       expand: false,
       builder: (_, scrollCtrl) => Container(
         decoration: BoxDecoration(
@@ -117,6 +130,7 @@ class _AddIncomeFormState extends State<AddIncomeForm> {
               // Descrição
               TextFormField(
                 controller: _descCtrl,
+                focusNode: _descFocus,
                 style: TextStyle(color: context.kTextPrimary),
                 decoration: const InputDecoration(labelText: 'Descrição', hintText: 'Ex: Salário, Freelance...'),
                 validator: (v) => (v == null || v.trim().isEmpty) ? 'Obrigatório' : null,
@@ -126,6 +140,7 @@ class _AddIncomeFormState extends State<AddIncomeForm> {
               // Valor
               TextFormField(
                 controller: _amountCtrl,
+                focusNode: _amountFocus,
                 style: const TextStyle(color: AppColors.income, fontFamily: 'JetBrainsMono'),
                 decoration: const InputDecoration(labelText: 'Valor (R\$)', prefixText: 'R\$ '),
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
@@ -165,7 +180,16 @@ class _AddIncomeFormState extends State<AddIncomeForm> {
                 value: _recurring,
                 onChanged: (v) => setState(() => _recurring = v),
               ),
-              const SizedBox(height: 24),
+
+              // Valor de Família
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: Text('Marcar como valor de família', style: TextStyle(color: context.kTextPrimary, fontSize: 14)),
+                subtitle: Text('Não soma no saldo pessoal', style: TextStyle(color: context.kTextSecondary, fontSize: 12)),
+                value: _isFamilyValue,
+                onChanged: (v) => setState(() => _isFamilyValue = v),
+              ),
+              const SizedBox(height: 20),
 
               ElevatedButton(
                 onPressed: _submit,

@@ -16,7 +16,8 @@
       "Bash(flutter doctor *)",
       "Bash(flutter emulators *)",
       "PowerShell(Stop-Process *)",
-      "PowerShell(New-Item *)"
+      "PowerShell(New-Item *)",
+      "Bash(Remove-Item *)"
     ]
   }
 }

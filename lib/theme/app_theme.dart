@@ -9,6 +9,7 @@ class AppColors {
   static const accent = Color(0xFF6C63FF);
   static const neonGreen = Color(0xFF39FF14);
   static const neonCyan = Color(0xFF00E5FF);
+  static const pixBlue = Color(0xFF0288D1);
   static const textPrimary = Color(0xFFE0E0F0);
   static const textSecondary = Color(0xFF9090A8);
   static const expense = Color(0xFFFF4757);

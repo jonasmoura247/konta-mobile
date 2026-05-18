@@ -46,6 +46,23 @@ class Transaction extends HiveObject {
   @HiveField(13)
   String? subscriptionSeriesId;
 
+  /// Subtipo de pagamento: 'pix', 'dinheiro', 'debito_direto'
+  /// Usado em lançamentos À Vista e Débito para indicar a forma de pagamento.
+  @HiveField(14)
+  String? paymentSubtype;
+
+  /// Indica se este lançamento deve usar a data de fechamento do cartão
+  /// para calcular o mês de cobrança.
+  /// false em lançamentos antigos (não afeta o histórico já ajustado manualmente).
+  @HiveField(15)
+  bool applyClosureDate;
+
+  /// Mês de fatura definido manualmente pelo usuário (ex.: 2026-04-01).
+  /// Quando não nulo, tem PRIORIDADE ABSOLUTA sobre qualquer cálculo automático.
+  /// O lançamento aparece exatamente neste mês, sem ser movido para o seguinte.
+  @HiveField(16)
+  DateTime? invoiceMonth;
+
   Transaction({
     required this.id,
     required this.groupId,
@@ -61,6 +78,9 @@ class Transaction extends HiveObject {
     this.cancelledFrom,
     required this.createdAt,
     this.subscriptionSeriesId,
+    this.paymentSubtype,
+    this.applyClosureDate = false,
+    this.invoiceMonth,
   });
 
   factory Transaction.fromJson(Map<String, dynamic> json) => Transaction(
@@ -80,6 +100,11 @@ class Transaction extends HiveObject {
             : null,
         createdAt: DateTime.parse(json['createdAt'] as String),
         subscriptionSeriesId: json['subscriptionSeriesId'] as String?,
+        paymentSubtype: json['paymentSubtype'] as String?,
+        applyClosureDate: json['applyClosureDate'] as bool? ?? false,
+        invoiceMonth: json['invoiceMonth'] != null
+            ? DateTime.parse(json['invoiceMonth'] as String)
+            : null,
       );
 
   Map<String, dynamic> toJson() => {
@@ -97,5 +122,8 @@ class Transaction extends HiveObject {
         'cancelledFrom': cancelledFrom?.toIso8601String().split('T').first,
         'createdAt': createdAt.toIso8601String(),
         'subscriptionSeriesId': subscriptionSeriesId,
+        'paymentSubtype': paymentSubtype,
+        'applyClosureDate': applyClosureDate,
+        'invoiceMonth': invoiceMonth?.toIso8601String().split('T').first,
       };
 }

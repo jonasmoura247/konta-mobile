@@ -30,7 +30,8 @@ class _IncomesListSheetState extends State<IncomesListSheet> {
       .toList()
     ..sort((a, b) => a.date.compareTo(b.date));
 
-  double get _total => _monthIncomes.fold(0, (s, i) => s + i.amount);
+  double get _total => _monthIncomes.where((i) => !i.isFamilyValue).fold(0, (s, i) => s + i.amount);
+  double get _familyTotal => _monthIncomes.where((i) => i.isFamilyValue).fold(0, (s, i) => s + i.amount);
 
   void _openEdit(Income income) {
     Navigator.of(context).pop();
@@ -184,6 +185,22 @@ class _IncomesListSheetState extends State<IncomesListSheet> {
                                           fontWeight: FontWeight.w600)),
                                 ),
                               ],
+                              if (inc.isFamilyValue) ...[
+                                const SizedBox(width: 6),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 6, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: Colors.purple.withValues(alpha: 0.15),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: const Text('Família',
+                                      style: TextStyle(
+                                          color: Colors.purple,
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.w600)),
+                                ),
+                              ],
                             ],
                           ),
                           trailing: Text(
@@ -207,22 +224,46 @@ class _IncomesListSheetState extends State<IncomesListSheet> {
                 color: context.kCard,
                 border: Border(top: BorderSide(color: context.kCardBorder)),
               ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text('Total',
-                      style: TextStyle(
-                          color: context.kTextPrimary,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 15)),
-                  Text(
-                    formatCurrency(_total, currency: widget.currency),
-                    style: const TextStyle(
-                        color: AppColors.income,
-                        fontWeight: FontWeight.bold,
-                        fontFamily: 'JetBrainsMono',
-                        fontSize: 16),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text('Total Pessoal',
+                          style: TextStyle(
+                              color: context.kTextPrimary,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 15)),
+                      Text(
+                        formatCurrency(_total, currency: widget.currency),
+                        style: const TextStyle(
+                            color: AppColors.income,
+                            fontWeight: FontWeight.bold,
+                            fontFamily: 'JetBrainsMono',
+                            fontSize: 16),
+                      ),
+                    ],
                   ),
+                  if (_familyTotal > 0) ...[
+                    const SizedBox(height: 4),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text('Total Família (não soma)',
+                            style: TextStyle(
+                                color: Colors.purple,
+                                fontSize: 12)),
+                        Text(
+                          formatCurrency(_familyTotal, currency: widget.currency),
+                          style: const TextStyle(
+                              color: Colors.purple,
+                              fontFamily: 'JetBrainsMono',
+                              fontSize: 12),
+                        ),
+                      ],
+                    ),
+                  ],
                 ],
               ),
             ),

@@ -8,6 +8,7 @@ import '../models/reserve.dart';
 import '../models/reserve_snapshot.dart';
 import '../models/reminder.dart';
 import '../models/goal.dart';
+import '../models/card_due_date.dart';
 
 class DatabaseService {
   // Incrementado sempre que dados críticos mudam (limpar, importar).
@@ -23,6 +24,7 @@ class DatabaseService {
       Hive.box<ReserveSnapshot>('reserve_snapshots');
   static Box<Reminder> get remindersBox => Hive.box<Reminder>('reminders');
   static Box<Goal> get goalsBox => Hive.box<Goal>('goals');
+  static Box<CardDueDate> get cardDueDateBox => Hive.box<CardDueDate>('card_due_dates');
 
   // --- META: Custom Categories ---
 
@@ -79,6 +81,69 @@ class DatabaseService {
     await metaBox.put('hidden_categories', jsonEncode(ids));
     _notify();
   }
+
+  // --- META: Category Order ---
+
+  static List<String> getCategoryOrder() {
+    final raw = metaBox.get('category_order');
+    if (raw == null) return [];
+    return List<String>.from(jsonDecode(raw) as List);
+  }
+
+  static Future<void> saveCategoryOrder(List<String> ids) async {
+    await metaBox.put('category_order', jsonEncode(ids));
+    _notify();
+  }
+
+  // --- META: Category Sort Mode ---
+
+  /// Valores: 'manual', 'alpha', 'usage'
+  static String getCategorySortMode() {
+    return metaBox.get('category_sort_mode') ?? 'manual';
+  }
+
+  static Future<void> saveCategorySortMode(String mode) async {
+    await metaBox.put('category_sort_mode', mode);
+    _notify();
+  }
+
+  // --- META: Category Default ---
+
+  static String? getCategoryDefault() {
+    return metaBox.get('category_default');
+  }
+
+  static Future<void> saveCategoryDefault(String? id) async {
+    if (id == null) {
+      await metaBox.delete('category_default');
+    } else {
+      await metaBox.put('category_default', id);
+    }
+  }
+
+  // --- META: Transaction Manual Order ---
+
+  static List<String> getTransactionOrder(String tabKey) {
+    final raw = metaBox.get('tx_order_$tabKey');
+    if (raw == null) return [];
+    return List<String>.from(jsonDecode(raw) as List);
+  }
+
+  static Future<void> saveTransactionOrder(String tabKey, List<String> ids) async {
+    await metaBox.put('tx_order_$tabKey', jsonEncode(ids));
+    // sem _notify() — UI atualiza via setState direto no onReorder
+  }
+
+  // --- META: App version tracking (changelog banner) ---
+
+  static String? getLastSeenVersion() {
+    return metaBox.get('last_seen_version');
+  }
+
+  static Future<void> saveLastSeenVersion(String version) async {
+    await metaBox.put('last_seen_version', version);
+  }
+
 
   static dynamic _keyById<T>(
       Box<T> box, String id, String Function(T item) getId) {
@@ -276,6 +341,7 @@ class DatabaseService {
     final data = {
       'transactions': getAllTransactions().map((t) => t.toJson()).toList(),
       'incomes': getAllIncomes().map((i) => i.toJson()).toList(),
+      'card_due_dates': getAllCardDueDates().map((c) => c.toJson()).toList(),
     };
     return jsonEncode(data);
   }
@@ -308,8 +374,30 @@ class DatabaseService {
       } catch (_) {}
     }
 
+    int cardDueDateCount = 0;
+    for (final item in (data['card_due_dates'] as List? ?? [])) {
+      try {
+        final cdd = CardDueDate.fromJson(item as Map<String, dynamic>);
+        final existing = getCardDueDate(cdd.bankId);
+        if (existing != null && existing.isInBox) {
+          existing.closureDay = cdd.closureDay;
+          existing.paymentDay = cdd.paymentDay;
+          existing.overrideClosure = cdd.overrideClosure;
+          existing.overridePayment = cdd.overridePayment;
+          await existing.save();
+        } else {
+          await cardDueDateBox.add(cdd);
+        }
+        cardDueDateCount++;
+      } catch (_) {}
+    }
+
     _notify();
-    return ImportResult(transactions: txCount, incomes: incomeCount);
+    return ImportResult(
+      transactions: txCount,
+      incomes: incomeCount,
+      cardDueDates: cardDueDateCount,
+    );
   }
 
   static Future<void> clearAll() async {
@@ -319,12 +407,72 @@ class DatabaseService {
     await snapshotsBox.clear();
     await remindersBox.clear();
     await goalsBox.clear();
+    await cardDueDateBox.clear();
     _notify();
+  }
+
+  // --- CARD DUE DATES ---
+
+  static List<CardDueDate> getAllCardDueDates() {
+    final keys = cardDueDateBox.keys.cast<int>().toList()..sort();
+    return [
+      for (final key in keys) cardDueDateBox.get(key)!,
+    ];
+  }
+
+  static CardDueDate? getCardDueDate(String bankId) {
+    for (final cdd in cardDueDateBox.values) {
+      if (cdd.bankId == bankId) return cdd;
+    }
+    return null;
+  }
+
+  static Future<void> saveCardDueDate(CardDueDate cdd) async {
+    final existing = getCardDueDate(cdd.bankId);
+    if (existing != null && existing.isInBox) {
+      existing.closureDay = cdd.closureDay;
+      existing.paymentDay = cdd.paymentDay;
+      existing.overrideClosure = cdd.overrideClosure;
+      existing.overridePayment = cdd.overridePayment;
+      await existing.save();
+    } else {
+      await cardDueDateBox.add(cdd);
+    }
+    _notify();
+  }
+
+  static Future<void> setCardClosureOverride(String bankId, DateTime month, int day) async {
+    final cdd = getCardDueDate(bankId);
+    if (cdd == null || !cdd.isInBox) return;
+    cdd.setClosureOverride(month, day);
+    await cdd.save();
+    _notify();
+  }
+
+  static Future<void> setCardPaymentOverride(String bankId, DateTime month, int day) async {
+    final cdd = getCardDueDate(bankId);
+    if (cdd == null || !cdd.isInBox) return;
+    cdd.setPaymentOverride(month, day);
+    await cdd.save();
+    _notify();
+  }
+
+  static Future<void> deleteCardDueDate(String bankId) async {
+    final cdd = getCardDueDate(bankId);
+    if (cdd != null && cdd.isInBox) {
+      await cdd.delete();
+      _notify();
+    }
   }
 }
 
 class ImportResult {
   final int transactions;
   final int incomes;
-  const ImportResult({required this.transactions, required this.incomes});
+  final int cardDueDates;
+  const ImportResult({
+    required this.transactions,
+    required this.incomes,
+    this.cardDueDates = 0,
+  });
 }

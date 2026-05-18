@@ -197,11 +197,24 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                                             color: AppColors.accent,
                                             fontSize: 22,
                                             fontWeight: FontWeight.bold)),
-                                    const SizedBox(width: 6),
-                                    Icon(Icons.settings_outlined,
-                                        size: 19,
-                                        color: AppColors.accent
-                                            .withValues(alpha: 0.6)),
+                                    const SizedBox(width: 8),
+                                    Container(
+                                      padding: const EdgeInsets.all(6),
+                                      decoration: BoxDecoration(
+                                        color: AppColors.accent.withValues(alpha: 0.08),
+                                        borderRadius: BorderRadius.circular(8),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: Colors.black.withValues(alpha: 0.04),
+                                            blurRadius: 4,
+                                            offset: const Offset(0, 2),
+                                          )
+                                        ],
+                                      ),
+                                      child: Icon(Icons.settings_outlined,
+                                          size: 22,
+                                          color: AppColors.accent),
+                                    ),
                                   ],
                                 ),
                                 if (_familyView)
@@ -333,6 +346,35 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                                             )),
                           ],
                         ),
+                        if (_summary.familyIncomeForMonth > 0) ...[
+                          const SizedBox(height: 6),
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                            decoration: BoxDecoration(
+                              color: Colors.purple.withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.people_outline, color: Colors.purple, size: 16),
+                                const SizedBox(width: 8),
+                                Text('Entradas Família (não somam no saldo)',
+                                    style: TextStyle(color: Colors.purple, fontSize: 12)),
+                                const Spacer(),
+                                Text(
+                                  formatCurrency(_summary.familyIncomeForMonth, currency: currency),
+                                  style: const TextStyle(
+                                    color: Colors.purple,
+                                    fontWeight: FontWeight.bold,
+                                    fontFamily: 'JetBrainsMono',
+                                    fontSize: 13,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
                         const SizedBox(height: 10),
                         if (_summary.totalDebit > 0) ...[
                           SummaryCard(

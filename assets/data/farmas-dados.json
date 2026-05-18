@@ -55,13 +55,13 @@
     },
     {
       "id": "ifood",
-      "name": "iFood",
+      "name": "Alimentação",
       "color": "#FF7A00",
       "icon": "🍔"
     },
     {
       "id": "uber",
-      "name": "Uber",
+      "name": "Transporte",
       "color": "#9D00FF",
       "icon": "🚗"
     },

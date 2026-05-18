@@ -23,8 +23,8 @@ const List<Category> kDefaultCategories = [
   Category(id: 'estudos',      name: 'Estudos',      color: Color(0xFF2196F3), icon: Icons.menu_book),
   Category(id: 'faculdade',    name: 'Faculdade',    color: Color(0xFF3F51B5), icon: Icons.school),
   Category(id: 'roupa',        name: 'Roupa',        color: Color(0xFFFF5722), icon: Icons.checkroom),
-  Category(id: 'ifood',        name: 'iFood',        color: Color(0xFFFF0000), icon: Icons.delivery_dining),
-  Category(id: 'uber',         name: 'Uber',         color: Color(0xFF607D8B), icon: Icons.local_taxi),
+  Category(id: 'ifood',        name: 'Alimentação',  color: Color(0xFFFF0000), icon: Icons.delivery_dining),
+  Category(id: 'uber',         name: 'Transporte',   color: Color(0xFF607D8B), icon: Icons.local_taxi),
   Category(id: 'gasolina',     name: 'Gasolina',     color: Color(0xFFFF9800), icon: Icons.local_gas_station),
   Category(id: 'saude',        name: 'Saúde',        color: Color(0xFF00BCD4), icon: Icons.favorite),
   Category(id: 'necessidade',  name: 'Necessidade',  color: Color(0xFF607D8B), icon: Icons.home),
@@ -57,8 +57,8 @@ IconData _iconForCategory(String name, String emoji) {
   if (n.contains('estud')) return Icons.menu_book;
   if (n.contains('facul') || n.contains('escola')) return Icons.school;
   if (n.contains('roupa') || n.contains('vest')) return Icons.checkroom;
-  if (n.contains('ifood') || n.contains('comida') || n.contains('food')) return Icons.delivery_dining;
-  if (n.contains('uber') || n.contains('táxi') || n.contains('taxi')) return Icons.local_taxi;
+  if (n.contains('ifood') || n.contains('comida') || n.contains('food') || n.contains('alimenta')) return Icons.delivery_dining;
+  if (n.contains('uber') || n.contains('táxi') || n.contains('taxi') || n.contains('transport')) return Icons.local_taxi;
   if (n.contains('gasolina') || n.contains('combustível')) return Icons.local_gas_station;
   if (n.contains('apart') || n.contains('aluguel') || n.contains('casa')) return Icons.apartment;
   if (n.contains('manu') || n.contains('repair')) return Icons.build;
@@ -89,15 +89,37 @@ void loadCategoriesFromJson(List<dynamic> jsonCategories) {
 /// Retorna todas as categorias disponíveis (padrão → dinâmicas → custom do usuário)
 List<Category> getAllCategories() {
   final result = <String, Category>{};
+
+  // Passo 1: começa com os padrões
   for (final c in kDefaultCategories) {
     result[c.id] = c;
   }
-  // Importadas via JSON
-  result.addAll(_dynamicCategories);
-  // Custom do usuário (maior prioridade — pode sobrescrever cor de existentes)
+
+  // Passo 2: aplica categorias do JSON
+  // • Mesmo ID que padrão → atualiza cor/ícone, mas FORÇA o nome do padrão
+  // • ID customizado com nome igual a um padrão → IGNORA (evita duplicatas)
+  // • ID customizado com nome único → adiciona normalmente
+  final defaultNameSet = kDefaultCategories
+      .map((d) => d.name.toLowerCase().trim())
+      .toSet();
+  for (final entry in _dynamicCategories.entries) {
+    final id = entry.key;
+    final c = entry.value;
+    final defaultCat = kDefaultCategories.where((d) => d.id == id).firstOrNull;
+    if (defaultCat != null) {
+      result[id] = Category(id: id, name: defaultCat.name, color: c.color, icon: c.icon);
+    } else if (!defaultNameSet.contains(c.name.toLowerCase().trim())) {
+      result[id] = c;
+    }
+    // ID customizado com nome duplicado de padrão → descarta
+  }
+
+  // Passo 3: custom do usuário (maior prioridade — pode sobrescrever cor/ícone)
   for (final c in DatabaseService.getCustomCategories()) {
     final id = c['id'] as String;
-    final name = c['name'] as String;
+    // Para IDs padrão, o nome NUNCA é sobrescrito pelo Hive
+    final defaultCat = kDefaultCategories.where((d) => d.id == id).firstOrNull;
+    final name = defaultCat?.name ?? (c['name'] as String);
     final colorHex = (c['color'] as String?) ?? '#546E7A';
     final emoji = (c['icon'] as String?) ?? '';
     result[id] = Category(
@@ -107,19 +129,50 @@ List<Category> getAllCategories() {
       icon: _iconForCategory(name, emoji),
     );
   }
-  // Deduplica por nome (case-insensitive), mantendo a de maior prioridade
-  // result.values itera em ordem de inserção: padrão → dinâmica → custom
-  // iterando normal e sobrescrevendo, o último (custom) fica no byName
-  final byName = <String, Category>{};
-  for (final c in result.values) {
-    byName[c.name.toLowerCase().trim()] = c;
-  }
-  return byName.values.toList();
+
+  return result.values.toList();
 }
 
 List<Category> getVisibleCategories() {
   final hidden = DatabaseService.getHiddenCategoryIds().toSet();
   return getAllCategories().where((c) => !hidden.contains(c.id)).toList();
+}
+
+/// Retorna categorias visíveis já ordenadas conforme o modo salvo.
+/// [usageCounts] é necessário apenas para o modo 'usage'.
+List<Category> getOrderedVisibleCategories({
+  Map<String, int>? usageCounts,
+}) {
+  final visible = getVisibleCategories();
+  final mode = DatabaseService.getCategorySortMode();
+
+  switch (mode) {
+    case 'alpha':
+      visible.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+      return visible;
+
+    case 'usage':
+      if (usageCounts != null && usageCounts.isNotEmpty) {
+        visible.sort((a, b) {
+          final ua = usageCounts[a.id] ?? 0;
+          final ub = usageCounts[b.id] ?? 0;
+          return ub.compareTo(ua); // mais usadas primeiro
+        });
+      }
+      return visible;
+
+    case 'manual':
+    default:
+      final order = DatabaseService.getCategoryOrder();
+      if (order.isEmpty) return visible;
+      final idIndex = {for (int i = 0; i < order.length; i++) order[i]: i};
+      visible.sort((a, b) {
+        final ia = idIndex[a.id] ?? 9999;
+        final ib = idIndex[b.id] ?? 9999;
+        return ia.compareTo(ib);
+      });
+      return visible;
+  }
 }
 
 Category getCategoryById(String id) {

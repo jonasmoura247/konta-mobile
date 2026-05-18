@@ -2,6 +2,10 @@
 
 part of 'app_settings.dart';
 
+// **************************************************************************
+// TypeAdapterGenerator
+// **************************************************************************
+
 class AppSettingsAdapter extends TypeAdapter<AppSettings> {
   @override
   final int typeId = 2;
@@ -18,9 +22,9 @@ class AppSettingsAdapter extends TypeAdapter<AppSettings> {
       familyMode: fields[2] as bool,
       familyCount: fields[3] as int,
       familyNames: (fields[4] as List?)?.cast<String>(),
-      carryoverMode: fields[5] as bool? ?? false,
-      goalsEnabled: fields[6] as bool? ?? false,
-      privacyAccepted: fields[7] is bool ? (fields[7] as bool) : false,
+      carryoverMode: fields[5] as bool,
+      goalsEnabled: fields[6] as bool,
+      privacyAccepted: fields[7] as bool,
     );
   }
 

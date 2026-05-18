@@ -9,6 +9,7 @@ import 'models/reserve.dart';
 import 'models/reserve_snapshot.dart';
 import 'models/reminder.dart';
 import 'models/goal.dart';
+import 'models/card_due_date.dart';
 import 'services/database_service.dart';
 import 'services/notification_service.dart';
 import 'services/seed_service.dart';
@@ -28,6 +29,7 @@ void main() async {
   Hive.registerAdapter(ReserveSnapshotAdapter());
   Hive.registerAdapter(ReminderAdapter());
   Hive.registerAdapter(GoalAdapter());
+  Hive.registerAdapter(CardDueDateAdapter());
 
   await Future.wait([
     Hive.openBox<Transaction>('transactions'),
@@ -38,6 +40,7 @@ void main() async {
     Hive.openBox<ReserveSnapshot>('reserve_snapshots'),
     Hive.openBox<Reminder>('reminders'),
     Hive.openBox<Goal>('goals'),
+    Hive.openBox<CardDueDate>('card_due_dates'),
   ]);
 
   await SeedService.seedIfEmpty();

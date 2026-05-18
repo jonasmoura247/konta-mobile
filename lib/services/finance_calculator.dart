@@ -1,5 +1,6 @@
 import '../models/transaction.dart';
 import '../models/income.dart';
+import '../services/database_service.dart';
 import '../utils/formatters.dart';
 
 class TransactionOccurrence {
@@ -7,10 +8,13 @@ class TransactionOccurrence {
   final double amount;
   final int installmentIndex;
   final int installmentTotal;
+  /// Data efetiva no mês de cobrança: mesmo dia da compra, mês da fatura.
+  final DateTime billingDate;
 
   const TransactionOccurrence({
     required this.transaction,
     required this.amount,
+    required this.billingDate,
     this.installmentIndex = 0,
     this.installmentTotal = 1,
   });
@@ -19,6 +23,7 @@ class TransactionOccurrence {
 class MonthSummary {
   final double totalExpenses;
   final double totalIncome;
+  final double familyIncomeForMonth; // Entradas marcadas como "valor de família"
   final double totalDebit;
   final double carryover;
   final double balance;
@@ -40,6 +45,7 @@ class MonthSummary {
     required this.byDebitCategory,
     this.carryover = 0.0,
     this.byBankGross = const {},
+    this.familyIncomeForMonth = 0.0,
   });
 }
 
@@ -100,6 +106,43 @@ class YearComparison {
 }
 
 class FinanceCalculator {
+  /// Mesmo dia da compra no mês de cobrança, clampado ao último dia do mês.
+  static DateTime _billingDate(DateTime billingMonth, int purchaseDay) {
+    final lastDay = DateTime(billingMonth.year, billingMonth.month + 1, 0).day;
+    return DateTime(billingMonth.year, billingMonth.month, purchaseDay.clamp(1, lastDay));
+  }
+
+  /// Retorna o mês de cobrança de uma transação de crédito (avista ou parcelamento).
+  ///
+  /// Prioridade:
+  ///   1. Se `t.invoiceMonth != null` → usa esse mês SEM NENHUMA regra automática.
+  ///      A escolha manual do usuário é absoluta e não pode ser movida.
+  ///   2. Caso contrário, aplica a regra de fechamento do cartão (se applyClosureDate=true):
+  ///      - Compra ANTES do fechamento → cobrança no mês seguinte (ciclo atual fecha este mês)
+  ///      - Compra NO DIA do fechamento ou APÓS → cobrança dois meses depois (entra no próximo ciclo)
+  ///      - Sem banco configurado / sem CardDueDate → mantém mês da compra
+  static DateTime getBillingMonth(Transaction t) {
+    // Prioridade absoluta: mês definido manualmente pelo usuário
+    if (t.invoiceMonth != null) {
+      return DateTime(t.invoiceMonth!.year, t.invoiceMonth!.month);
+    }
+
+    if (!t.applyClosureDate) return t.startDate;
+    if (t.bankId == null) return t.startDate;
+    if (t.groupId != 'avista' && t.groupId != 'parcelamento') return t.startDate;
+
+    final cdd = DatabaseService.getCardDueDate(t.bankId!);
+    if (cdd == null) return t.startDate;
+
+    final closureDay = cdd.closureDayFor(t.startDate);
+
+    if (t.startDate.day < closureDay) {
+      return DateTime(t.startDate.year, t.startDate.month + 1);
+    } else {
+      return DateTime(t.startDate.year, t.startDate.month + 2);
+    }
+  }
+
   // Retorna ocorrências de crédito (avista, parcelamento, assinatura) — exclui débito.
   static List<TransactionOccurrence> getOccurrencesForMonth(
     List<Transaction> transactions,
@@ -117,20 +160,29 @@ class FinanceCalculator {
 
       switch (t.groupId) {
         case 'avista':
-          if (isSameMonth(t.startDate, yearMonth)) {
+          // Usa mês de cobrança (pode ser próximo mês se após fechamento do cartão)
+          final billingMonth = getBillingMonth(t);
+          if (isSameMonth(billingMonth, yearMonth)) {
             final amount =
                 t.familyMode ? t.totalAmount / divisor : t.totalAmount;
-            result.add(TransactionOccurrence(transaction: t, amount: amount));
+            result.add(TransactionOccurrence(
+              transaction: t,
+              amount: amount,
+              billingDate: _billingDate(yearMonth, t.startDate.day),
+            ));
           }
 
         case 'parcelamento':
-          final diff = monthDiff(t.startDate, yearMonth);
+          // O primeiro mês da parcela é o mês de cobrança (respeitando fechamento do cartão)
+          final billingStart = getBillingMonth(t);
+          final diff = monthDiff(billingStart, yearMonth);
           if (diff >= 0 && diff < t.installments) {
             final monthly = t.totalAmount / t.installments;
             final amount = t.familyMode ? monthly / divisor : monthly;
             result.add(TransactionOccurrence(
               transaction: t,
               amount: amount,
+              billingDate: _billingDate(yearMonth, t.startDate.day),
               installmentIndex: diff + 1,
               installmentTotal: t.installments,
             ));
@@ -145,13 +197,16 @@ class FinanceCalculator {
           if (started && notCancelled) {
             final amount =
                 t.familyMode ? t.totalAmount / divisor : t.totalAmount;
-            result.add(TransactionOccurrence(transaction: t, amount: amount));
+            result.add(TransactionOccurrence(
+              transaction: t,
+              amount: amount,
+              billingDate: _billingDate(yearMonth, t.startDate.day),
+            ));
           }
       }
     }
 
-    result.sort(
-        (a, b) => b.transaction.startDate.compareTo(a.transaction.startDate));
+    result.sort((a, b) => b.billingDate.compareTo(a.billingDate));
     return result;
   }
 
@@ -170,17 +225,35 @@ class FinanceCalculator {
       if (familyOnly && !t.familyMode) continue;
       if (!isSameMonth(t.startDate, yearMonth)) continue;
       final amount = t.familyMode ? t.totalAmount / divisor : t.totalAmount;
-      result.add(TransactionOccurrence(transaction: t, amount: amount));
+      result.add(TransactionOccurrence(
+        transaction: t,
+        amount: amount,
+        billingDate: t.startDate,
+      ));
     }
 
-    result.sort(
-        (a, b) => b.transaction.startDate.compareTo(a.transaction.startDate));
+    result.sort((a, b) => b.billingDate.compareTo(a.billingDate));
     return result;
   }
 
   static double getIncomeForMonth(List<Income> incomes, DateTime yearMonth) {
     double total = 0;
     for (final i in incomes) {
+      // Excluir entradas marcadas como "valor de família"
+      if (i.isFamilyValue) continue;
+      if (i.recurring || isSameMonth(i.date, yearMonth)) {
+        total += i.amount;
+      }
+    }
+    return total;
+  }
+
+  // Retorna soma das entradas marcadas como "valor de família" (informativo, não afeta saldo)
+  static double getFamilyIncomeForMonth(List<Income> incomes, DateTime yearMonth) {
+    double total = 0;
+    for (final i in incomes) {
+      // Considerar APENAS entradas com isFamilyValue=true
+      if (!i.isFamilyValue) continue;
       if (i.recurring || isSameMonth(i.date, yearMonth)) {
         total += i.amount;
       }
@@ -201,6 +274,7 @@ class FinanceCalculator {
         familyOnly: familyOnly);
     final totalExpenses = occurrences.fold(0.0, (s, o) => s + o.amount);
     final totalIncome = getIncomeForMonth(incomes, yearMonth);
+    final familyIncomeForMonth = getFamilyIncomeForMonth(incomes, yearMonth);
 
     final debitOccurrences = getDebitOccurrencesForMonth(
         transactions, yearMonth, familyCount,
@@ -237,6 +311,7 @@ class FinanceCalculator {
     return MonthSummary(
       totalExpenses: totalExpenses,
       totalIncome: totalIncome,
+      familyIncomeForMonth: familyIncomeForMonth,
       totalDebit: totalDebit,
       carryover: carryover,
       balance: totalIncome + carryover - totalExpenses - totalDebit,
@@ -420,6 +495,14 @@ class FinanceCalculator {
     final years = <int>{};
     for (final t in transactions) {
       years.add(t.startDate.year);
+      // Para parcelamentos, adiciona todos os anos até o fim das parcelas
+      if (t.groupId == 'parcelamento' && t.installments > 1) {
+        final totalMonths = t.startDate.month + t.installments - 1;
+        final endYear = t.startDate.year + (totalMonths - 1) ~/ 12;
+        for (int y = t.startDate.year + 1; y <= endYear; y++) {
+          years.add(y);
+        }
+      }
     }
     for (final i in incomes) {
       years.add(i.date.year);

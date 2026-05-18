@@ -4,6 +4,33 @@ import '../models/app_settings.dart';
 import '../models/category.dart';
 import 'database_service.dart';
 
+/// Mapeamento de nomes antigos (marca) → novo nome genérico
+const _bankNameMigration = {
+  'Itaú': 'Banco 1',
+  'Itau': 'Banco 1',
+  'Bradesco': 'Banco 2',
+  'Caixa': 'Banco 3',
+  'Banco do Brasil': 'Banco 4',
+  'Santander': 'Banco 5',
+  'Sicoob': 'Banco 6',
+  'Sicredi': 'Banco 7',
+  'BTG Pactual': 'Banco 8',
+  'BTG': 'Banco 8',
+  'Safra': 'Banco 9',
+  'Nubank': 'Banco 10',
+  'Inter': 'Banco 11',
+  'C6 Bank': 'Banco 12',
+  'C6': 'Banco 12',
+  'Neon': 'Banco 13',
+  'Next': 'Banco 14',
+  'PicPay': 'Banco 15',
+  'PagBank': 'Banco 16',
+  'Mercado Pago': 'Banco 17',
+  'Stone': 'Banco 18',
+  'XP': 'Banco 19',
+  'Will Bank': 'Banco 20',
+};
+
 class SeedService {
   static const _assetPath = 'assets/data/farmas-dados.json';
 
@@ -24,6 +51,9 @@ class SeedService {
     final jsonCategories = data['categories'] as List<dynamic>? ?? [];
     loadCategoriesFromJson(jsonCategories);
 
+    // Migração única: renomeia bancos com nomes de marca para nomes genéricos
+    await _migrateBankNamesIfNeeded();
+
     // Se as configurações já existem, o banco já foi inicializado — não faz nada
     if (DatabaseService.settingsBox.isNotEmpty) return;
 
@@ -40,5 +70,30 @@ class SeedService {
           ['Eu', 'Parceiro(a)'],
     );
     await DatabaseService.saveSettings(settings);
+  }
+
+  /// Renomeia nomes de bancos antigos (marcas) para genéricos.
+  /// Roda apenas uma vez (controlado pela chave 'banks_renamed_v1' no Hive).
+  static Future<void> _migrateBankNamesIfNeeded() async {
+    const migrationKey = 'banks_renamed_v1';
+    if (DatabaseService.metaBox.get(migrationKey) == 'true') return;
+
+    final customBanks = DatabaseService.getCustomBanks();
+    bool changed = false;
+    final updated = customBanks.map((b) {
+      final name = b['name'] as String? ?? '';
+      final newName = _bankNameMigration[name];
+      if (newName != null && newName != name) {
+        changed = true;
+        return {...b, 'name': newName};
+      }
+      return b;
+    }).toList();
+
+    if (changed) {
+      await DatabaseService.saveCustomBanks(updated);
+    }
+
+    await DatabaseService.metaBox.put(migrationKey, 'true');
   }
 }

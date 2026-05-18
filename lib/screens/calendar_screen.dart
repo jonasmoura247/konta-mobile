@@ -3,6 +3,7 @@ import 'package:uuid/uuid.dart';
 import '../models/reminder.dart';
 import '../models/category.dart';
 import '../models/bank.dart';
+import '../models/card_due_date.dart';
 import '../services/database_service.dart';
 import '../services/finance_calculator.dart';
 import '../services/notification_service.dart';
@@ -20,6 +21,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
   DateTime _activeMonth = DateTime.now();
   List<TransactionOccurrence> _occurrences = [];
   List<Reminder> _monthReminders = [];
+  List<CardDueDate> _cardDueDates = [];
 
   @override
   void initState() {
@@ -41,7 +43,35 @@ class _CalendarScreenState extends State<CalendarScreen> {
               r.date.year == _activeMonth.year &&
               r.date.month == _activeMonth.month)
           .toList();
+      _cardDueDates = DatabaseService.getAllCardDueDates();
     });
+  }
+
+  /// Mapeia dia do mês → lista de bancos com fechamento naquele dia.
+  Map<int, List<BankDef>> get _closureDayBanks {
+    final map = <int, List<BankDef>>{};
+    for (final cdd in _cardDueDates) {
+      final day = cdd.closureDayFor(_activeMonth);
+      final bank = getBankById(cdd.bankId);
+      if (bank != null) {
+        map.putIfAbsent(day, () => []).add(bank);
+      }
+    }
+    return map;
+  }
+
+  /// Mapeia dia do mês → lista de bancos com pagamento naquele dia.
+  Map<int, List<BankDef>> get _paymentDayBanks {
+    final map = <int, List<BankDef>>{};
+    for (final cdd in _cardDueDates) {
+      if (cdd.paymentDay == 0) continue; // sem dia de pagamento configurado
+      final day = cdd.paymentDayFor(_activeMonth);
+      final bank = getBankById(cdd.bankId);
+      if (bank != null) {
+        map.putIfAbsent(day, () => []).add(bank);
+      }
+    }
+    return map;
   }
 
   Map<int, double> get _dailyTotals {
@@ -59,17 +89,23 @@ class _CalendarScreenState extends State<CalendarScreen> {
   void _onDayTap(int dayNum) {
     final day = DateTime(_activeMonth.year, _activeMonth.month, dayNum);
     final reminders = DatabaseService.getRemindersForDay(day);
-    _showDayModal(day, reminders);
+    final closingBanks = _closureDayBanks[dayNum] ?? [];
+    final payingBanks = _paymentDayBanks[dayNum] ?? [];
+    _showDayModal(day, reminders, closingBanks, payingBanks);
   }
 
-  void _showDayModal(DateTime day, List<Reminder> reminders) {
+  void _showDayModal(DateTime day, List<Reminder> reminders, List<BankDef> closingBanks, List<BankDef> payingBanks) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (_) => _DayModal(
         day: day,
+        activeMonth: _activeMonth,
         reminders: reminders,
+        closingBanks: closingBanks,
+        payingBanks: payingBanks,
+        onChanged: _load,
         // Callbacks fazem apenas a operação de dados; o modal fecha a si mesmo
         onAdd: (r) async {
           await DatabaseService.addReminder(r);
@@ -105,6 +141,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
     final rows = (totalCells / 7).ceil();
     final dailyTotals = _dailyTotals;
     final reminderDays = _daysWithReminders;
+    final closureDayBanks = _closureDayBanks;
+    final paymentDayBanks = _paymentDayBanks;
     final currency = DatabaseService.getSettings().currency;
 
     return Scaffold(
@@ -167,6 +205,11 @@ class _CalendarScreenState extends State<CalendarScreen> {
                 }
                 final amount = dailyTotals[dayNum];
                 final hasReminder = reminderDays.contains(dayNum);
+                final closingBanks = closureDayBanks[dayNum] ?? [];
+                final payingBanks = paymentDayBanks[dayNum] ?? [];
+                final hasClosing = closingBanks.isNotEmpty;
+                final hasPaying = payingBanks.isNotEmpty;
+                final closingColor = hasClosing ? closingBanks.first.color : null;
                 final isToday = DateTime.now().year == _activeMonth.year &&
                     DateTime.now().month == _activeMonth.month &&
                     DateTime.now().day == dayNum;
@@ -184,7 +227,9 @@ class _CalendarScreenState extends State<CalendarScreen> {
                       border: Border.all(
                           color: isToday
                               ? AppColors.accent
-                              : AppColors.cardBorder),
+                              : hasClosing
+                                  ? closingColor!.withValues(alpha: 0.7)
+                                  : AppColors.cardBorder),
                     ),
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -206,14 +251,39 @@ class _CalendarScreenState extends State<CalendarScreen> {
                                 color: AppColors.expense, fontSize: 8),
                             overflow: TextOverflow.ellipsis,
                           ),
-                        if (hasReminder)
-                          Container(
-                            width: 5,
-                            height: 5,
-                            margin: const EdgeInsets.only(top: 1),
-                            decoration: const BoxDecoration(
-                                color: AppColors.accent,
-                                shape: BoxShape.circle),
+                        if (hasClosing || hasPaying || hasReminder)
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              if (hasClosing)
+                                Container(
+                                  width: 6, height: 6,
+                                  margin: const EdgeInsets.only(top: 1, right: 1),
+                                  decoration: BoxDecoration(
+                                    color: closingColor,
+                                    shape: BoxShape.circle,
+                                  ),
+                                ),
+                              if (hasPaying)
+                                Container(
+                                  width: 6, height: 6,
+                                  margin: const EdgeInsets.only(top: 1, left: 1),
+                                  decoration: BoxDecoration(
+                                    color: payingBanks.first.color.withValues(alpha: 0.9),
+                                    shape: BoxShape.rectangle,
+                                    borderRadius: BorderRadius.circular(2),
+                                  ),
+                                ),
+                              if (!hasClosing && !hasPaying && hasReminder)
+                                Container(
+                                  width: 5, height: 5,
+                                  margin: const EdgeInsets.only(top: 1),
+                                  decoration: const BoxDecoration(
+                                    color: AppColors.accent,
+                                    shape: BoxShape.circle,
+                                  ),
+                                ),
+                            ],
                           ),
                       ],
                     ),
@@ -231,13 +301,21 @@ class _CalendarScreenState extends State<CalendarScreen> {
 // ── Modal do dia ─────────────────────────────────────────────────────────────
 class _DayModal extends StatefulWidget {
   final DateTime day;
+  final DateTime activeMonth;
   final List<Reminder> reminders;
+  final List<BankDef> closingBanks;
+  final List<BankDef> payingBanks;
+  final VoidCallback onChanged;
   final Future<void> Function(Reminder) onAdd;
   final Future<void> Function(Reminder) onDelete;
 
   const _DayModal({
     required this.day,
+    required this.activeMonth,
     required this.reminders,
+    required this.closingBanks,
+    required this.payingBanks,
+    required this.onChanged,
     required this.onAdd,
     required this.onDelete,
   });
@@ -260,6 +338,52 @@ class _DayModalState extends State<_DayModal> {
   void dispose() {
     _descCtrl.dispose();
     super.dispose();
+  }
+
+  Future<void> _editClosureDay(BankDef bank) async {
+    final month = widget.activeMonth;
+    final lastDay = DateTime(month.year, month.month + 1, 0).day;
+    // Dia atual configurado para esse banco nesse mês
+    final cdd = DatabaseService.getCardDueDate(bank.id);
+    int selectedDay = cdd?.closureDayFor(month) ?? widget.day.day;
+    selectedDay = selectedDay.clamp(1, lastDay);
+
+    final confirmed = await showDialog<int>(
+      context: context,
+      builder: (ctx) => _ClosureDayPickerDialog(
+        bankName: bank.name,
+        bankColor: bank.color,
+        initialDay: selectedDay,
+        maxDay: lastDay,
+      ),
+    );
+    if (confirmed != null && confirmed != cdd?.closureDayFor(month)) {
+      await DatabaseService.setCardClosureOverride(bank.id, month, confirmed);
+      widget.onChanged();
+    }
+  }
+
+  Future<void> _editPaymentDay(BankDef bank) async {
+    final month = widget.activeMonth;
+    final lastDay = DateTime(month.year, month.month + 1, 0).day;
+    final cdd = DatabaseService.getCardDueDate(bank.id);
+    int selectedDay = cdd?.paymentDayFor(month) ?? widget.day.day;
+    selectedDay = selectedDay.clamp(1, lastDay);
+
+    final confirmed = await showDialog<int>(
+      context: context,
+      builder: (ctx) => _ClosureDayPickerDialog(
+        bankName: bank.name,
+        bankColor: bank.color,
+        initialDay: selectedDay,
+        maxDay: lastDay,
+        label: 'pagamento',
+      ),
+    );
+    if (confirmed != null && confirmed != cdd?.paymentDayFor(month)) {
+      await DatabaseService.setCardPaymentOverride(bank.id, month, confirmed);
+      widget.onChanged();
+    }
   }
 
   Future<void> _pickTime() async {
@@ -339,6 +463,89 @@ class _DayModalState extends State<_DayModal> {
               ],
             ),
             const SizedBox(height: 8),
+
+            // Fechamento de cartão(ões) neste dia
+            if (widget.closingBanks.isNotEmpty) ...[
+              ...widget.closingBanks.map((bank) => Container(
+                margin: const EdgeInsets.only(bottom: 8),
+                padding: const EdgeInsets.fromLTRB(14, 10, 4, 10),
+                decoration: BoxDecoration(
+                  color: bank.color.withValues(alpha: 0.10),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: bank.color.withValues(alpha: 0.5)),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.credit_card, color: bank.color, size: 18),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        'Fechamento do ${bank.name}',
+                        style: TextStyle(
+                          color: bank.color,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: () => _editClosureDay(bank),
+                      style: TextButton.styleFrom(
+                        foregroundColor: bank.color,
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                        minimumSize: Size.zero,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
+                      child: const Text('Alterar dia', style: TextStyle(fontSize: 12)),
+                    ),
+                  ],
+                ),
+              )),
+              const SizedBox(height: 8),
+            ],
+
+            // Pagamento de cartão(ões) neste dia
+            if (widget.payingBanks.isNotEmpty) ...[
+              ...widget.payingBanks.map((bank) => Container(
+                margin: const EdgeInsets.only(bottom: 8),
+                padding: const EdgeInsets.fromLTRB(14, 10, 4, 10),
+                decoration: BoxDecoration(
+                  color: bank.color.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: bank.color.withValues(alpha: 0.5),
+                    style: BorderStyle.solid,
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.payments_outlined, color: bank.color, size: 18),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        'Pagamento do ${bank.name}',
+                        style: TextStyle(
+                          color: bank.color,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: () => _editPaymentDay(bank),
+                      style: TextButton.styleFrom(
+                        foregroundColor: bank.color,
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                        minimumSize: Size.zero,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
+                      child: const Text('Alterar dia', style: TextStyle(fontSize: 12)),
+                    ),
+                  ],
+                ),
+              )),
+              const SizedBox(height: 8),
+            ],
 
             // Formulário de novo lembrete
             if (_adding) ...[
@@ -457,7 +664,9 @@ class _DayModalState extends State<_DayModal> {
               const SizedBox(height: 16),
               Center(
                 child: Text(
-                  'Nenhum lembrete para este dia.\nToque em "+ Lembrete" para adicionar.',
+                  widget.closingBanks.isNotEmpty
+                      ? 'Nenhum lembrete para este dia.'
+                      : 'Nenhum lembrete para este dia.\nToque em "+ Lembrete" para adicionar.',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                       color: context.kTextSecondary, fontSize: 13, height: 1.6),
@@ -551,6 +760,119 @@ class _DayModalState extends State<_DayModal> {
           ],
         ),
       ),
+    );
+  }
+}
+
+// ── Dialog para alterar dia de fechamento de um mês específico ───────────────
+class _ClosureDayPickerDialog extends StatefulWidget {
+  final String bankName;
+  final Color bankColor;
+  final int initialDay;
+  final int maxDay;
+  final String label; // 'fechamento' ou 'pagamento'
+
+  const _ClosureDayPickerDialog({
+    required this.bankName,
+    required this.bankColor,
+    required this.initialDay,
+    required this.maxDay,
+    this.label = 'fechamento',
+  });
+
+  @override
+  State<_ClosureDayPickerDialog> createState() =>
+      _ClosureDayPickerDialogState();
+}
+
+class _ClosureDayPickerDialogState extends State<_ClosureDayPickerDialog> {
+  late int _day;
+
+  @override
+  void initState() {
+    super.initState();
+    _day = widget.initialDay;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      backgroundColor: context.kCard,
+      title: Text(
+        'Alterar ${widget.label} — ${widget.bankName}',
+        style: TextStyle(color: context.kTextPrimary, fontSize: 15),
+      ),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            'Somente este mês será alterado.\nOs outros meses continuam com o dia original.',
+            style: TextStyle(color: context.kTextSecondary, fontSize: 12, height: 1.5),
+          ),
+          const SizedBox(height: 20),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              IconButton(
+                onPressed: _day > 1
+                    ? () => setState(() => _day--)
+                    : null,
+                icon: const Icon(Icons.remove_circle_outline),
+                color: widget.bankColor,
+                iconSize: 28,
+              ),
+              const SizedBox(width: 16),
+              Container(
+                width: 64,
+                height: 48,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: widget.bankColor.withValues(alpha: 0.10),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: widget.bankColor.withValues(alpha: 0.4)),
+                ),
+                child: Text(
+                  '$_day',
+                  style: TextStyle(
+                    color: widget.bankColor,
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    fontFamily: 'JetBrainsMono',
+                  ),
+                ),
+              ),
+              const SizedBox(width: 16),
+              IconButton(
+                onPressed: _day < widget.maxDay
+                    ? () => setState(() => _day++)
+                    : null,
+                icon: const Icon(Icons.add_circle_outline),
+                color: widget.bankColor,
+                iconSize: 28,
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Máximo: dia ${widget.maxDay} neste mês',
+            style: TextStyle(color: context.kTextSecondary, fontSize: 11),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancelar'),
+        ),
+        ElevatedButton(
+          onPressed: () => Navigator.of(context).pop(_day),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: widget.bankColor,
+            foregroundColor: Colors.white,
+          ),
+          child: const Text('Confirmar'),
+        ),
+      ],
     );
   }
 }

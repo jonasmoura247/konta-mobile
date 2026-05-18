@@ -1,41 +1,44 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
-part of 'goal.dart';
+part of 'card_due_date.dart';
 
 // **************************************************************************
 // TypeAdapterGenerator
 // **************************************************************************
 
-class GoalAdapter extends TypeAdapter<Goal> {
+class CardDueDateAdapter extends TypeAdapter<CardDueDate> {
   @override
-  final int typeId = 6;
+  final int typeId = 7;
 
   @override
-  Goal read(BinaryReader reader) {
+  CardDueDate read(BinaryReader reader) {
     final numOfFields = reader.readByte();
     final fields = <int, dynamic>{
       for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
     };
-    return Goal(
-      id: fields[0] as String,
-      name: fields[1] as String,
-      targetAmount: fields[2] as double,
-      savedAmount: fields[3] as double,
+    return CardDueDate(
+      bankId: fields[0] as String,
+      closureDay: fields[1] as int,
+      paymentDay: fields[2] as int,
+      overrideClosure: (fields[3] as Map?)?.cast<String, int>(),
+      overridePayment: (fields[4] as Map?)?.cast<String, int>(),
     );
   }
 
   @override
-  void write(BinaryWriter writer, Goal obj) {
+  void write(BinaryWriter writer, CardDueDate obj) {
     writer
-      ..writeByte(4)
+      ..writeByte(5)
       ..writeByte(0)
-      ..write(obj.id)
+      ..write(obj.bankId)
       ..writeByte(1)
-      ..write(obj.name)
+      ..write(obj.closureDay)
       ..writeByte(2)
-      ..write(obj.targetAmount)
+      ..write(obj.paymentDay)
       ..writeByte(3)
-      ..write(obj.savedAmount);
+      ..write(obj.overrideClosure)
+      ..writeByte(4)
+      ..write(obj.overridePayment);
   }
 
   @override
@@ -44,7 +47,7 @@ class GoalAdapter extends TypeAdapter<Goal> {
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      other is GoalAdapter &&
+      other is CardDueDateAdapter &&
           runtimeType == other.runtimeType &&
           typeId == other.typeId;
 }

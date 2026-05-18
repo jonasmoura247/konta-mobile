@@ -10,6 +10,7 @@ class TransactionCard extends StatelessWidget {
   final String currency;
   final VoidCallback? onEdit;
   final VoidCallback? onDelete;
+  final Widget? dragHandle;
 
   const TransactionCard({
     super.key,
@@ -17,6 +18,7 @@ class TransactionCard extends StatelessWidget {
     this.currency = 'BRL',
     this.onEdit,
     this.onDelete,
+    this.dragHandle,
   });
 
   @override
@@ -65,15 +67,26 @@ class TransactionCard extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                     maxLines: 1,
                   ),
+                  const SizedBox(height: 2),
+                  Text(
+                    formatDate(occurrence.billingDate),
+                    style: TextStyle(
+                      color: context.kTextSecondary,
+                      fontSize: 11,
+                    ),
+                  ),
                   const SizedBox(height: 4),
                   Wrap(
                     spacing: 4,
                     runSpacing: 4,
                     children: [
                       _Badge(label: cat.name, color: cat.color),
-                      _Badge(
-                          label: groupLabel(t.groupId),
-                          color: AppColors.accent),
+                      // Group badge — só para cartão (não para pix/dinheiro)
+                      if (t.paymentSubtype != 'pix' &&
+                          t.paymentSubtype != 'dinheiro')
+                        _Badge(
+                            label: groupLabel(t.groupId),
+                            color: AppColors.accent),
                       if (t.groupId == 'parcelamento')
                         _Badge(
                           label:
@@ -83,7 +96,7 @@ class TransactionCard extends StatelessWidget {
                       if (t.bankId != null)
                         _Badge(
                             label: getBankById(t.bankId)?.name ?? t.bankId!,
-                            color: AppColors.neonCyan),
+                            color: getBankById(t.bankId)?.color ?? AppColors.neonCyan),
                       if (t.familyMode)
                         _Badge(
                           label: t.familyMember != null &&
@@ -92,6 +105,15 @@ class TransactionCard extends StatelessWidget {
                               : '👨‍👩‍👧 Família',
                           color: AppColors.warning,
                         ),
+                      // Pix badge
+                      if (t.paymentSubtype == 'pix')
+                        _Badge(label: 'Pix', color: AppColors.pixBlue),
+                      // Dinheiro badge
+                      if (t.paymentSubtype == 'dinheiro')
+                        _Badge(label: 'Dinheiro', color: AppColors.income),
+                      // Crédito badge — só para Pix feito no cartão de crédito
+                      if (t.paymentSubtype == 'pix' && t.groupId != 'debito')
+                        _Badge(label: 'Crédito', color: AppColors.accent),
                     ],
                   ),
                 ],
@@ -113,27 +135,33 @@ class TransactionCard extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 2),
-                PopupMenuButton<String>(
-                  padding: EdgeInsets.zero,
-                  iconSize: 18,
-                  icon: Icon(Icons.more_vert,
-                      color: context.kTextSecondary, size: 18),
-                  color: context.kCard,
-                  onSelected: (v) {
-                    Future<void>.delayed(const Duration(milliseconds: 180), () {
-                      if (v == 'edit') onEdit?.call();
-                      if (v == 'delete') onDelete?.call();
-                    });
-                  },
-                  itemBuilder: (_) => [
-                    PopupMenuItem(
-                        value: 'edit',
-                        child: Text('Editar',
-                            style: TextStyle(color: context.kTextPrimary))),
-                    const PopupMenuItem(
-                        value: 'delete',
-                        child: Text('Excluir',
-                            style: TextStyle(color: AppColors.expense))),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    PopupMenuButton<String>(
+                      padding: EdgeInsets.zero,
+                      iconSize: 18,
+                      icon: Icon(Icons.more_vert,
+                          color: context.kTextSecondary, size: 18),
+                      color: context.kCard,
+                      onSelected: (v) {
+                        Future<void>.delayed(const Duration(milliseconds: 180), () {
+                          if (v == 'edit') onEdit?.call();
+                          if (v == 'delete') onDelete?.call();
+                        });
+                      },
+                      itemBuilder: (_) => [
+                        PopupMenuItem(
+                            value: 'edit',
+                            child: Text('Editar',
+                                style: TextStyle(color: context.kTextPrimary))),
+                        const PopupMenuItem(
+                            value: 'delete',
+                            child: Text('Excluir',
+                                style: TextStyle(color: AppColors.expense))),
+                      ],
+                    ),
+                    if (dragHandle != null) dragHandle!,
                   ],
                 ),
               ],
@@ -164,3 +192,4 @@ class _Badge extends StatelessWidget {
         ),
       );
 }
+

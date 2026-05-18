@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import '../app.dart';
 import '../models/app_settings.dart';
 import '../models/category.dart';
 import '../models/bank.dart';
@@ -7,6 +8,8 @@ import '../services/database_service.dart';
 import '../services/import_service.dart';
 import '../theme/app_theme.dart';
 import '../utils/privacy_policy_text.dart';
+import 'card_due_dates_screen.dart';
+import 'changelog_screen.dart';
 
 // ───────────────────────────────────────────────────────── color palette ──
 const List<Color> _kPalette = [
@@ -31,6 +34,60 @@ const List<Color> _kPalette = [
   Color(0xFFFF6B35),
   Color(0xFF820AD1),
 ];
+
+// ───────────────────────────────────────────────────────── icon picker ──
+const List<IconData> _kCatIcons = [
+  Icons.shopping_cart,
+  Icons.local_pharmacy,
+  Icons.restaurant,
+  Icons.sports_esports,
+  Icons.school,
+  Icons.directions_car,
+  Icons.local_gas_station,
+  Icons.home,
+  Icons.beach_access,
+  Icons.work,
+  Icons.fitness_center,
+  Icons.local_hospital,
+  Icons.checkroom,
+  Icons.devices,
+  Icons.movie,
+  Icons.flight,
+  Icons.pets,
+  Icons.card_giftcard,
+  Icons.attach_money,
+  Icons.receipt_long,
+  Icons.build,
+  Icons.sports_soccer,
+  Icons.music_note,
+  Icons.book,
+  Icons.local_drink,
+  Icons.coffee,
+  Icons.power,
+  Icons.wifi,
+  Icons.child_care,
+  Icons.more_horiz,
+];
+
+String _iconDataToName(IconData ico) {
+  // índice paralelo a _kCatIcons
+  const iconNames = [
+    'shopping_cart', 'local_pharmacy', 'restaurant', 'sports_esports',
+    'school', 'directions_car', 'local_gas_station', 'home',
+    'beach_access', 'work', 'fitness_center', 'local_hospital',
+    'checkroom', 'devices', 'movie', 'flight', 'pets', 'card_giftcard',
+    'attach_money', 'receipt_long', 'build', 'sports_soccer',
+    'music_note', 'book', 'local_drink', 'coffee', 'power', 'wifi',
+    'child_care', 'more_horiz',
+  ];
+  for (int i = 0; i < _kCatIcons.length; i++) {
+    if (_kCatIcons[i].codePoint == ico.codePoint &&
+        _kCatIcons[i].fontFamily == ico.fontFamily) {
+      return iconNames[i];
+    }
+  }
+  return 'more_horiz';
+}
 
 Future<Color?> _pickColor(BuildContext context, Color initial) {
   Color picked = initial;
@@ -106,6 +163,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
   late List<Map<String, dynamic>> _customBanks;
   late List<String> _hiddenBankIds;
   late List<String> _hiddenCategoryIds;
+  late String _catSortMode; // 'manual', 'alpha', 'usage'
+  late List<String> _catOrder; // IDs na ordem manual
 
   @override
   void initState() {
@@ -115,6 +174,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _customBanks = DatabaseService.getCustomBanks();
     _hiddenBankIds = List.from(DatabaseService.getHiddenBankIds());
     _hiddenCategoryIds = List.from(DatabaseService.getHiddenCategoryIds());
+    _catSortMode = DatabaseService.getCategorySortMode();
+    _catOrder = List.from(DatabaseService.getCategoryOrder());
   }
 
   Future<void> _save() async {
@@ -133,16 +194,129 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   // ───────────────── Category editing ──────────────────────────────────
-  void _editCategoryColor(Category cat) async {
-    final currentColor = _overrideColor(cat.id, cat.color, isCat: true);
-    final picked = await _pickColor(context, currentColor);
-    if (picked == null) return;
+  void _editCategory(Category cat) async {
+    final isCustom = !kDefaultCategories.any((d) => d.id == cat.id);
+    final nameCtrl = TextEditingController(text: cat.name);
+    Color currentColor = _overrideColor(cat.id, cat.color, isCat: true);
+    IconData currentIcon = cat.icon;
+    bool isDefault = DatabaseService.getCategoryDefault() == cat.id;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx2, setSt) => AlertDialog(
+          backgroundColor: ctx.kCard,
+          title: Text('Editar categoria',
+              style: TextStyle(color: ctx.kTextPrimary)),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Nome (apenas para custom)
+                if (isCustom) ...[
+                  TextField(
+                    controller: nameCtrl,
+                    style: TextStyle(color: ctx.kTextPrimary),
+                    decoration: InputDecoration(
+                      labelText: 'Nome',
+                      labelStyle: TextStyle(color: ctx.kTextSecondary),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                ],
+                // Cor
+                Text('Cor', style: TextStyle(color: ctx.kTextSecondary, fontSize: 12)),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: _kPalette.map((c) {
+                    final sel = currentColor == c;
+                    return GestureDetector(
+                      onTap: () => setSt(() => currentColor = c),
+                      child: Container(
+                        width: 32,
+                        height: 32,
+                        decoration: BoxDecoration(
+                          color: c,
+                          shape: BoxShape.circle,
+                          border: sel ? Border.all(color: Colors.white, width: 2.5) : null,
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: 16),
+                // Ícone
+                Text('Ícone', style: TextStyle(color: ctx.kTextSecondary, fontSize: 12)),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: _kCatIcons.map((ico) {
+                    final sel = currentIcon == ico;
+                    return GestureDetector(
+                      onTap: () => setSt(() => currentIcon = ico),
+                      child: Container(
+                        width: 36,
+                        height: 36,
+                        decoration: BoxDecoration(
+                          color: sel
+                              ? currentColor.withValues(alpha: 0.25)
+                              : ctx.kCardBorder,
+                          borderRadius: BorderRadius.circular(8),
+                          border: sel ? Border.all(color: currentColor, width: 2) : null,
+                        ),
+                        child: Icon(ico, size: 18,
+                            color: sel ? currentColor : ctx.kTextSecondary),
+                      ),
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: 16),
+                // Categoria padrão
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text('Categoria padrão',
+                        style: TextStyle(color: ctx.kTextPrimary, fontSize: 13)),
+                    Switch(
+                      value: isDefault,
+                      onChanged: (v) => setSt(() => isDefault = v),
+                      activeThumbColor: AppColors.accent,
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: const Text('Cancelar')),
+            TextButton(
+                onPressed: () => Navigator.pop(ctx, true),
+                child: const Text('Salvar')),
+          ],
+        ),
+      ),
+    );
+    if (confirmed != true) return;
+
+    // Salva categoria padrão
+    await DatabaseService.saveCategoryDefault(isDefault ? cat.id : null);
+
     final idx = _customCats.indexWhere((c) => c['id'] == cat.id);
+    final newName = (isCustom && nameCtrl.text.trim().isNotEmpty)
+        ? nameCtrl.text.trim()
+        : cat.name;
+    final iconName = _iconDataToName(currentIcon);
     final entry = {
       'id': cat.id,
-      'name': cat.name,
-      'color': colorToHex(picked),
-      'icon': '',
+      'name': newName,
+      'color': colorToHex(currentColor),
+      'icon': iconName,
     };
     if (idx >= 0) {
       _customCats[idx] = entry;
@@ -151,6 +325,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
     await _saveCats();
   }
+
+  // (delegado removido — _editCategoryColor não é mais chamado externamente)
 
   void _addCategory() async {
     final nameCtrl = TextEditingController();
@@ -403,11 +579,45 @@ class _SettingsScreenState extends State<SettingsScreen> {
     await DatabaseService.saveHiddenCategoryIds(_hiddenCategoryIds);
   }
 
+  void _setCatSortMode(String mode) {
+    setState(() => _catSortMode = mode);
+    DatabaseService.saveCategorySortMode(mode);
+  }
+
   // ────────────────────────────────────────────────────── build ──
   @override
   Widget build(BuildContext context) {
-    final allCats = getAllCategories();
-    final allBanks = getAllBanks();
+    List<Category> allCats = getAllCategories();
+    // Aplica ordenação conforme _catSortMode
+    if (_catSortMode == 'alpha') {
+      allCats.sort((a, b) =>
+          a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+    } else if (_catSortMode == 'manual' && _catOrder.isNotEmpty) {
+      final idIndex = {
+        for (int i = 0; i < _catOrder.length; i++) _catOrder[i]: i
+      };
+      allCats.sort((a, b) {
+        final ia = idIndex[a.id] ?? 9999;
+        final ib = idIndex[b.id] ?? 9999;
+        return ia.compareTo(ib);
+      });
+    }
+    // Ocultos sempre ficam no final, independentemente de filtro ou ordenação
+    {
+      final hiddenSet = _hiddenCategoryIds.toSet();
+      final visibleCats = allCats.where((c) => !hiddenSet.contains(c.id)).toList();
+      final hiddenCats  = allCats.where((c) =>  hiddenSet.contains(c.id)).toList();
+      allCats = [...visibleCats, ...hiddenCats];
+    }
+
+    // Bancos: ocultos sempre ficam no final
+    final List<BankDef> allBanks = () {
+      final raw = getAllBanks();
+      final hiddenSet = _hiddenBankIds.toSet();
+      final visibleBanks = raw.where((b) => !hiddenSet.contains(b.id)).toList();
+      final hiddenBanks  = raw.where((b) =>  hiddenSet.contains(b.id)).toList();
+      return [...visibleBanks, ...hiddenBanks];
+    }();
     bool isCustomCat(String id) => _customCats.any(
         (c) => c['id'] == id && !kDefaultCategories.any((d) => d.id == id));
 
@@ -528,82 +738,97 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
             ],
           ),
-          _Card(children: [
-            ...allCats.asMap().entries.map((e) {
-              final i = e.key;
-              final cat = e.value;
-              final displayColor =
-                  _overrideColor(cat.id, cat.color, isCat: true);
-              final isCustom = isCustomCat(cat.id);
-              final isCatHidden = _hiddenCategoryIds.contains(cat.id);
-              return Column(
-                children: [
-                  if (i > 0) const Divider(height: 1),
-                  ListTile(
-                    dense: true,
-                    leading: GestureDetector(
-                      onTap: () => _editCategoryColor(cat),
-                      child: Opacity(
-                        opacity: isCatHidden ? 0.35 : 1.0,
-                        child: Container(
-                          width: 28,
-                          height: 28,
-                          decoration: BoxDecoration(
-                              color: displayColor, shape: BoxShape.circle),
-                          child: Icon(cat.icon, color: Colors.white, size: 14),
-                        ),
-                      ),
-                    ),
-                    title: Text(cat.name,
-                        style: TextStyle(
-                            color: isCatHidden
-                                ? context.kTextSecondary
-                                : context.kTextPrimary,
-                            fontSize: 13)),
-                    subtitle: Text(
-                        isCustom ? 'Customizada' : 'Toque na cor para editar',
-                        style: TextStyle(
-                            color: context.kTextSecondary, fontSize: 10)),
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        IconButton(
-                          icon: Icon(
-                            isCatHidden
-                                ? Icons.visibility_off_outlined
-                                : Icons.visibility_outlined,
-                            size: 18,
-                            color: isCatHidden
-                                ? context.kTextSecondary
-                                : AppColors.accent,
-                          ),
-                          onPressed: () => _toggleCategoryVisibility(cat.id),
-                          constraints: const BoxConstraints(),
-                          padding: const EdgeInsets.all(6),
-                        ),
-                        if (isCustom)
-                          IconButton(
-                            icon: const Icon(Icons.delete_outline,
-                                size: 18, color: AppColors.expense),
-                            onPressed: () => _deleteCustomCategory(cat.id),
-                            constraints: const BoxConstraints(),
-                            padding: const EdgeInsets.all(6),
-                          )
-                        else
-                          IconButton(
-                            icon: const Icon(Icons.color_lens_outlined,
-                                size: 18, color: AppColors.accent),
-                            onPressed: () => _editCategoryColor(cat),
-                            constraints: const BoxConstraints(),
-                            padding: const EdgeInsets.all(6),
-                          ),
-                      ],
-                    ),
-                  ),
-                ],
-              );
-            }),
-          ]),
+          // Sort mode selector
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Row(
+              children: [
+                _SortModeBtn(
+                  label: 'Manual',
+                  selected: _catSortMode == 'manual',
+                  onTap: () => _setCatSortMode('manual'),
+                ),
+                const SizedBox(width: 6),
+                _SortModeBtn(
+                  label: 'A–Z',
+                  selected: _catSortMode == 'alpha',
+                  onTap: () => _setCatSortMode('alpha'),
+                ),
+                const SizedBox(width: 6),
+                _SortModeBtn(
+                  label: 'Mais usadas',
+                  selected: _catSortMode == 'usage',
+                  onTap: () => _setCatSortMode('usage'),
+                ),
+              ],
+            ),
+          ),
+          if (_catSortMode == 'manual')
+            Container(
+              decoration: BoxDecoration(
+                color: context.kCard,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: context.kCardBorder),
+              ),
+              clipBehavior: Clip.antiAlias,
+              child: ReorderableListView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: allCats.length,
+                onReorder: (oldIdx, newIdx) {
+                  if (newIdx > oldIdx) newIdx--;
+                  setState(() {
+                    final moved = allCats.removeAt(oldIdx);
+                    allCats.insert(newIdx, moved);
+                    _catOrder = allCats.map((c) => c.id).toList();
+                  });
+                  DatabaseService.saveCategoryOrder(_catOrder);
+                },
+                itemBuilder: (ctx, idx) {
+                  final cat = allCats[idx];
+                  final displayColor =
+                      _overrideColor(cat.id, cat.color, isCat: true);
+                  final isCustom = isCustomCat(cat.id);
+                  final isCatHidden = _hiddenCategoryIds.contains(cat.id);
+                  return _CatTile(
+                    key: ValueKey(cat.id),
+                    cat: cat,
+                    displayColor: displayColor,
+                    isCustom: isCustom,
+                    isCatHidden: isCatHidden,
+                    showDragHandle: true,
+                    isFirst: idx == 0,
+                    onTap: () => _editCategory(cat),
+                    onToggleVisibility: () =>
+                        _toggleCategoryVisibility(cat.id),
+                    onDelete: () => _deleteCustomCategory(cat.id),
+                  );
+                },
+              ),
+            )
+          else
+            _Card(children: [
+              ...allCats.asMap().entries.map((e) {
+                final cat = e.value;
+                final displayColor =
+                    _overrideColor(cat.id, cat.color, isCat: true);
+                final isCustom = isCustomCat(cat.id);
+                final isCatHidden = _hiddenCategoryIds.contains(cat.id);
+                return _CatTile(
+                  key: ValueKey(cat.id),
+                  cat: cat,
+                  displayColor: displayColor,
+                  isCustom: isCustom,
+                  isCatHidden: isCatHidden,
+                  showDragHandle: false,
+                  isFirst: e.key == 0,
+                  onTap: () => _editCategory(cat),
+                  onToggleVisibility: () =>
+                      _toggleCategoryVisibility(cat.id),
+                  onDelete: () => _deleteCustomCategory(cat.id),
+                );
+              }),
+            ]),
 
           // ── Cartões / Bancos ──────────────────────────────────────
           const SizedBox(height: 20),
@@ -654,9 +879,28 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 ? context.kTextSecondary
                                 : context.kTextPrimary,
                             fontSize: 13)),
-                    subtitle: Text(isCustom ? 'Customizado' : 'Padrão',
-                        style: TextStyle(
-                            color: context.kTextSecondary, fontSize: 10)),
+                    subtitle: isHidden
+                        ? Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                                decoration: BoxDecoration(
+                                  color: AppColors.textSecondary.withValues(alpha: 0.18),
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: const Text('Oculto',
+                                    style: TextStyle(
+                                        color: AppColors.textSecondary, fontSize: 9)),
+                              ),
+                              const SizedBox(width: 6),
+                              Text(isCustom ? 'Customizado' : 'Padrão',
+                                  style: TextStyle(
+                                      color: context.kTextSecondary, fontSize: 10)),
+                            ],
+                          )
+                        : Text(isCustom ? 'Customizado' : 'Padrão',
+                            style: TextStyle(
+                                color: context.kTextSecondary, fontSize: 10)),
                     trailing: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
@@ -697,6 +941,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
             }),
           ]),
 
+          // Vencimento de Cartões
+          const SizedBox(height: 12),
+          _Card(children: [
+            ListTile(
+              leading: const Icon(Icons.credit_score, color: AppColors.accent),
+              title: Text('Vencimento de Cartões',
+                  style: TextStyle(color: context.kTextPrimary)),
+              subtitle: Text('Configurar dia de fechamento e pagamento',
+                  style: TextStyle(color: context.kTextSecondary, fontSize: 12)),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const CardDueDatesScreen()),
+              ),
+            ),
+          ]),
+
           // ── Dados ─────────────────────────────────────────────────
           const SizedBox(height: 20),
           _SectionTitle('Dados'),
@@ -715,7 +975,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 messenger.showSnackBar(SnackBar(
                   content: Text(result == null
                       ? 'Importação cancelada'
-                      : '${result.transactions} transações e ${result.incomes} entradas importadas'),
+                      : '${result.transactions} transações, ${result.incomes} entradas e ${result.cardDueDates} vencimentos importados'),
                   backgroundColor: result == null
                       ? AppColors.textSecondary
                       : AppColors.income,
@@ -782,6 +1042,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
           _SectionTitle('Sobre'),
           _Card(children: [
             ListTile(
+              leading: const Icon(Icons.new_releases_outlined, color: AppColors.accent),
+              title: Text('Últimas Atualizações',
+                  style: TextStyle(color: context.kTextPrimary)),
+              subtitle: Text('v$kAppVersion — veja o que há de novo',
+                  style: TextStyle(color: context.kTextSecondary, fontSize: 12)),
+              trailing: Icon(Icons.chevron_right, color: context.kTextSecondary),
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const ChangelogScreen()),
+              ),
+            ),
+            const Divider(height: 1),
+            ListTile(
               leading:
                   const Icon(Icons.shield_outlined, color: AppColors.accent),
               title: Text('Política de Privacidade',
@@ -799,7 +1071,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               leading: Icon(Icons.info_outline, color: context.kTextSecondary),
               title:
                   Text('Versão', style: TextStyle(color: context.kTextPrimary)),
-              trailing: Text('1.0.0',
+              trailing: Text(kAppVersion,
                   style: TextStyle(
                       color: context.kTextSecondary,
                       fontFamily: 'JetBrainsMono')),
@@ -864,6 +1136,146 @@ class _SwitchTile extends StatelessWidget {
             : null,
         value: value,
         onChanged: onChanged,
+      );
+}
+
+class _SortModeBtn extends StatelessWidget {
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+  const _SortModeBtn(
+      {required this.label, required this.selected, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) => GestureDetector(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          decoration: BoxDecoration(
+            color: selected
+                ? AppColors.accent.withValues(alpha: 0.18)
+                : context.kCard,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: selected ? AppColors.accent : context.kCardBorder,
+              width: selected ? 1.5 : 1,
+            ),
+          ),
+          child: Text(
+            label,
+            style: TextStyle(
+              color: selected ? AppColors.accent : context.kTextSecondary,
+              fontSize: 12,
+              fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
+            ),
+          ),
+        ),
+      );
+}
+
+class _CatTile extends StatelessWidget {
+  final Category cat;
+  final Color displayColor;
+  final bool isCustom;
+  final bool isCatHidden;
+  final bool showDragHandle;
+  final bool isFirst;
+  final VoidCallback onTap;
+  final VoidCallback onToggleVisibility;
+  final VoidCallback onDelete;
+
+  const _CatTile({
+    super.key,
+    required this.cat,
+    required this.displayColor,
+    required this.isCustom,
+    required this.isCatHidden,
+    required this.showDragHandle,
+    required this.isFirst,
+    required this.onTap,
+    required this.onToggleVisibility,
+    required this.onDelete,
+  });
+
+  @override
+  Widget build(BuildContext context) => Column(
+        children: [
+          if (!isFirst) const Divider(height: 1),
+          ListTile(
+            dense: true,
+            onTap: onTap,
+            leading: Opacity(
+              opacity: isCatHidden ? 0.35 : 1.0,
+              child: Container(
+                width: 28,
+                height: 28,
+                decoration: BoxDecoration(
+                    color: displayColor, shape: BoxShape.circle),
+                child:
+                    Icon(cat.icon, color: Colors.white, size: 14),
+              ),
+            ),
+            title: Text(cat.name,
+                style: TextStyle(
+                    color: isCatHidden
+                        ? context.kTextSecondary
+                        : context.kTextPrimary,
+                    fontSize: 13)),
+            subtitle: isCatHidden
+                ? Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                        decoration: BoxDecoration(
+                          color: AppColors.textSecondary.withValues(alpha: 0.18),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: const Text('Oculto',
+                            style: TextStyle(
+                                color: AppColors.textSecondary, fontSize: 9)),
+                      ),
+                      const SizedBox(width: 6),
+                      Text(isCustom ? 'Customizada' : 'Padrão',
+                          style: TextStyle(
+                              color: context.kTextSecondary, fontSize: 10)),
+                    ],
+                  )
+                : Text(
+                    isCustom ? 'Customizada' : 'Toque para editar',
+                    style: TextStyle(
+                        color: context.kTextSecondary, fontSize: 10)),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                IconButton(
+                  icon: Icon(
+                    isCatHidden
+                        ? Icons.visibility_off_outlined
+                        : Icons.visibility_outlined,
+                    size: 18,
+                    color: isCatHidden
+                        ? context.kTextSecondary
+                        : AppColors.accent,
+                  ),
+                  onPressed: onToggleVisibility,
+                  constraints: const BoxConstraints(),
+                  padding: const EdgeInsets.all(6),
+                ),
+                if (isCustom)
+                  IconButton(
+                    icon: const Icon(Icons.delete_outline,
+                        size: 18, color: AppColors.expense),
+                    onPressed: onDelete,
+                    constraints: const BoxConstraints(),
+                    padding: const EdgeInsets.all(6),
+                  ),
+                if (showDragHandle)
+                  const Icon(Icons.drag_handle,
+                      size: 18, color: AppColors.textSecondary),
+              ],
+            ),
+          ),
+        ],
       );
 }
 

@@ -12,6 +12,46 @@ import 'services/database_service.dart';
 import 'services/month_selection_service.dart';
 import 'theme/app_theme.dart';
 
+const kAppVersion = '1.0.9';
+
+/// Histórico de changelogs por versão (mais recente primeiro).
+const kChangelog = <String, List<String>>{
+  '1.0.9': [
+    'Lançamentos: segure o ícone ≡ ao lado dos 3 pontinhos e arraste para reorganizar.',
+    'A ordem é salva automaticamente por aba (Todos, Crédito, Débito, Pix, Dinheiro).',
+    'Fecha o app, troca de aba, minimiza — a ordem persiste exatamente como você deixou.',
+    'Flag do banco agora usa a cor configurada nas suas configurações.',
+  ],
+  '1.0.8': [
+    'Lançamentos: nova organização por abas — Todos, Cartão, Pix e Dinheiro.',
+    'Cartão agora tem sub-abas: Crédito e Débito.',
+    'Pix com cartão de crédito: suporte completo, aparece na aba Crédito.',
+    'Destaque visual para o mês de entrada na fatura do cartão.',
+    'Formulário de lançamento não perde os dados ao minimizar o app ou trocar de aplicativo.',
+  ],
+  '1.0.7': [
+    'Backup e exportacao passaram a incluir vencimentos de cartao.',
+    'Importacao e reset ficaram alinhados com os vencimentos de cartao.',
+    'A ordem dos bancos no calendario agora permanece estavel.',
+    'Lancamentos editados preservam a regra de fechamento original.',
+  ],
+  '1.0.6': [
+    'Entradas marcadas como "Valor Família" — não afetam o saldo pessoal.',
+    'Configure o dia de fechamento e pagamento de cada cartão de crédito.',
+    'Compras feitas após o fechamento do cartão aparecem no mês correto automaticamente.',
+    'Teclado restaurado ao retornar de outro aplicativo durante um lançamento.',
+  ],
+  '1.0.5': [
+    'Novo seletor Cartão / Débito ao criar lançamentos.',
+    'Subtipo de pagamento: Pix, Dinheiro, Débito.',
+    'Preview do valor da parcela antes de confirmar.',
+    'Edição completa de categorias (nome, ícone, cor).',
+    'Ordenação de categorias personalizada.',
+    'Remoção de categorias duplicadas.',
+    'Escolher local para download de relatórios.',
+  ],
+};
+
 class KontaApp extends StatelessWidget {
   const KontaApp({super.key});
 
@@ -116,10 +156,76 @@ class _ShellState extends State<_Shell> {
     }
   }
 
+  void _showChangelogDialog() {
+    final items = kChangelog[kAppVersion] ?? [];
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Novidades da v$kAppVersion'),
+        content: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              for (final item in items) ...[
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('• ', style: TextStyle(fontWeight: FontWeight.bold)),
+                    Expanded(child: Text(item)),
+                  ],
+                ),
+                const SizedBox(height: 6),
+              ],
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              DatabaseService.saveLastSeenVersion(kAppVersion);
+              Navigator.of(context).pop();
+              setState(() {});
+            },
+            child: const Text('Fechar'),
+          )
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final showChangelog = DatabaseService.getLastSeenVersion() != kAppVersion;
     return Scaffold(
-      body: widget.child,
+      body: Column(
+        children: [
+          if (showChangelog)
+            Container(
+              width: double.infinity,
+              color: AppColors.accent.withValues(alpha: 0.06),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              child: Row(
+                children: [
+                  Expanded(
+                      child: Text('Konta foi atualizado para v$kAppVersion — veja as novidades!',
+                          style: const TextStyle(fontWeight: FontWeight.w600))),
+                  TextButton(
+                    onPressed: _showChangelogDialog,
+                    child: const Text('Ver novidades'),
+                  ),
+                  TextButton(
+                    onPressed: () {
+                      DatabaseService.saveLastSeenVersion(kAppVersion);
+                      setState(() {});
+                    },
+                    child: const Text('Fechar'),
+                  )
+                ],
+              ),
+            ),
+          Expanded(child: widget.child),
+        ],
+      ),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
           border: Border(top: BorderSide(color: context.kCardBorder, width: 1)),

@@ -19,12 +19,16 @@ class Income extends HiveObject {
   @HiveField(4)
   late bool recurring;
 
+  @HiveField(5)
+  late bool isFamilyValue;
+
   Income({
     required this.id,
     required this.description,
     required this.amount,
     required this.date,
     this.recurring = false,
+    this.isFamilyValue = false,
   });
 
   factory Income.fromJson(Map<String, dynamic> json) => Income(
@@ -33,6 +37,7 @@ class Income extends HiveObject {
         amount: (json['amount'] as num).toDouble(),
         date: DateTime.parse(json['date'] as String),
         recurring: json['recurring'] as bool? ?? false,
+        isFamilyValue: json['isFamilyValue'] as bool? ?? false,
       );
 
   Map<String, dynamic> toJson() => {
@@ -41,5 +46,6 @@ class Income extends HiveObject {
         'amount': amount,
         'date': date.toIso8601String().split('T').first,
         'recurring': recurring,
+        'isFamilyValue': isFamilyValue,
       };
 }
