@@ -1,53 +1,143 @@
-# Miscellaneous
-*.class
-*.log
-*.pyc
-*.swp
+# ═══════════════════════════════════════════════════════════
+#  Konta — .gitignore
+#  Organizado por categoria. Regra geral: artefatos gerados,
+#  credenciais e configs locais nunca entram no repositório.
+# ═══════════════════════════════════════════════════════════
 
-# Android signing — NUNCA commitar
-android/key.properties
-*.jks
-*.keystore
 
-# Codemagic
-codemagic.yaml.secrets
-.DS_Store
-.atom/
-.build/
-.buildlog/
-.history
-.svn/
-.swiftpm/
-migrate_working_dir/
-
-# IntelliJ related
-*.iml
-*.ipr
-*.iws
-.idea/
-
-# The .vscode folder contains launch configuration and tasks you configure in
-# VS Code which you may wish to be included in version control, so this line
-# is commented out by default.
-#.vscode/
-
-# Flutter/Dart/Pub related
-**/doc/api/
-**/ios/Flutter/.last_build_id
+# ── Flutter / Dart ───────────────────────────────────────────
 .dart_tool/
+.flutter-plugins
 .flutter-plugins-dependencies
 .pub-cache/
 .pub/
 /build/
 /coverage/
+**/doc/api/
 
-# Symbolication related
+# Arquivos gerados pelo build_runner (commitar apenas se necessário)
+# *.g.dart     ← descomente se quiser ignorar adapters Hive gerados
+# *.freezed.dart
+
+# Obfuscation / symbolication
 app.*.symbols
-
-# Obfuscation related
 app.*.map.json
 
-# Android Studio will place build artifacts here
-/android/app/debug
-/android/app/profile
-/android/app/release
+# Flutter export env (gerado pelo flutter run)
+flutter_export_environment.sh
+
+
+# ── Android ──────────────────────────────────────────────────
+/android/app/debug/
+/android/app/profile/
+/android/app/release/
+/android/.gradle/
+/android/captures/
+/android/local.properties
+/android/.cxx/
+
+# Gradle wrapper (gerado automaticamente)
+/android/gradlew
+/android/gradlew.bat
+/android/gradle/wrapper/gradle-wrapper.jar
+
+# Plugin gerado pelo Flutter
+/android/app/src/main/java/io/flutter/plugins/GeneratedPluginRegistrant.java
+
+# 🔑 CHAVES DE ASSINATURA — NUNCA COMMITAR
+android/key.properties
+*.jks
+*.keystore
+
+
+# ── iOS ──────────────────────────────────────────────────────
+**/ios/Flutter/.last_build_id
+**/ios/.symlinks/
+**/ios/Pods/
+**/ios/*.xcworkspace/
+**/ios/Flutter/Flutter.framework
+**/ios/Flutter/Flutter.podspec
+**/ios/Runner/GeneratedPluginRegistrant.*
+**/ios/Flutter/Generated.xcconfig
+**/ios/Flutter/app.flx
+
+
+# ── IDEs ─────────────────────────────────────────────────────
+# IntelliJ / Android Studio
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# VS Code / Cursor
+.vscode/
+*.code-workspace
+
+# Eclipse
+.classpath
+.project
+.settings/
+
+
+# ── Claude Code ──────────────────────────────────────────────
+# settings.local.json contém permissões específicas da máquina
+.claude/settings.local.json
+
+
+# ── Segredos e Configurações Locais ──────────────────────────
+.env
+.env.*
+*.secret
+secrets.json
+secrets.yaml
+secrets.yml
+google-services.json
+GoogleService-Info.plist
+codemagic.yaml.secrets
+
+
+# ── Sistema Operacional ──────────────────────────────────────
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100
+.Trashes
+
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Linux
+*~
+.directory
+
+
+# ── Logs e Temporários ───────────────────────────────────────
+*.log
+*.log.*
+*.swp
+*.swo
+*.tmp
+*.temp
+*.bak
+*.orig
+
+
+# ── Ferramentas de CI / CD ───────────────────────────────────
+.buildlog/
+migrate_working_dir/
+
+
+# ── Outros ───────────────────────────────────────────────────
+.history
+.atom/
+.svn/
+.swiftpm/
+*.class
+*.pyc
+*.pyo
