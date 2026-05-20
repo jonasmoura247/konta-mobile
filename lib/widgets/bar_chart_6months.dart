@@ -213,7 +213,7 @@ class _BarChart6MonthsState extends State<BarChart6Months> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(Icons.chevron_left, size: 12, color: context.kTextSecondary),
-            Text(' arraste para ver todos os meses ',
+            Text(' Arraste para ver todos os meses ',
                 style: TextStyle(color: context.kTextSecondary, fontSize: 9)),
             Icon(Icons.chevron_right, size: 12, color: context.kTextSecondary),
           ],

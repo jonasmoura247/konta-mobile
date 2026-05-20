@@ -130,7 +130,7 @@ class _ChartsCarouselState extends State<ChartsCarousel> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(Icons.chevron_left, size: 14, color: context.kTextSecondary),
-            Text(' deslize para ver mais ', style: TextStyle(color: context.kTextSecondary, fontSize: 10)),
+            Text(' Deslize para ver mais ', style: TextStyle(color: context.kTextSecondary, fontSize: 10)),
             Icon(Icons.chevron_right, size: 14, color: context.kTextSecondary),
           ],
         ),
