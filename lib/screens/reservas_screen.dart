@@ -414,6 +414,7 @@ class _ReserveFormState extends State<_ReserveForm> {
               TextFormField(
                 controller: _descCtrl,
                 style: TextStyle(color: context.kTextPrimary),
+                textCapitalization: TextCapitalization.words,
                 decoration: const InputDecoration(labelText: 'Descrição'),
                 validator: (v) => (v == null || v.trim().isEmpty) ? 'Obrigatório' : null,
               ),
@@ -824,6 +825,7 @@ class _GoalFormState extends State<_GoalForm> {
               TextFormField(
                 controller: _nameCtrl,
                 style: TextStyle(color: context.kTextPrimary),
+                textCapitalization: TextCapitalization.words,
                 decoration: const InputDecoration(labelText: 'Nome da meta (ex: Comprar um carro)'),
                 validator: (v) => (v == null || v.trim().isEmpty) ? 'Obrigatório' : null,
               ),

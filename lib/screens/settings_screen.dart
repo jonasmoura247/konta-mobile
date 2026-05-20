@@ -225,6 +225,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   TextField(
                     controller: nameCtrl,
                     style: TextStyle(color: ctx.kTextPrimary),
+                    textCapitalization: TextCapitalization.words,
                     decoration: InputDecoration(
                       labelText: 'Nome',
                       labelStyle: TextStyle(color: ctx.kTextSecondary),
@@ -351,6 +352,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               TextField(
                 controller: nameCtrl,
                 style: TextStyle(color: ctx.kTextPrimary),
+                textCapitalization: TextCapitalization.words,
                 decoration: InputDecoration(
                   labelText: 'Nome',
                   labelStyle: TextStyle(color: ctx.kTextSecondary),
@@ -444,6 +446,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               TextField(
                 controller: nameCtrl,
                 style: TextStyle(color: ctx.kTextPrimary),
+                textCapitalization: TextCapitalization.words,
                 decoration: InputDecoration(
                   labelText: 'Nome',
                   labelStyle: TextStyle(color: ctx.kTextSecondary),
@@ -512,6 +515,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               TextField(
                 controller: nameCtrl,
                 style: TextStyle(color: ctx.kTextPrimary),
+                textCapitalization: TextCapitalization.words,
                 decoration: InputDecoration(
                   labelText: 'Nome (ex: Bradesco)',
                   labelStyle: TextStyle(color: ctx.kTextSecondary),

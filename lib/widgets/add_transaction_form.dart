@@ -459,6 +459,7 @@ class _AddTransactionFormState extends State<AddTransactionForm>
                 controller: _descCtrl,
                 focusNode: _descFocus,
                 style: TextStyle(color: context.kTextPrimary),
+                textCapitalization: TextCapitalization.words,
                 decoration: const InputDecoration(labelText: 'Descrição'),
                 validator: (v) =>
                     (v == null || v.trim().isEmpty) ? 'Obrigatório' : null,

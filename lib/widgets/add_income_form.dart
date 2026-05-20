@@ -132,6 +132,7 @@ class _AddIncomeFormState extends State<AddIncomeForm>
                 controller: _descCtrl,
                 focusNode: _descFocus,
                 style: TextStyle(color: context.kTextPrimary),
+                textCapitalization: TextCapitalization.words,
                 decoration: const InputDecoration(labelText: 'Descrição', hintText: 'Ex: Salário, Freelance...'),
                 validator: (v) => (v == null || v.trim().isEmpty) ? 'Obrigatório' : null,
               ),

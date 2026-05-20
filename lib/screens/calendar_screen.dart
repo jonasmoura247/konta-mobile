@@ -587,6 +587,7 @@ class _DayModalState extends State<_DayModal> {
                     TextField(
                       controller: _descCtrl,
                       style: TextStyle(color: context.kTextPrimary),
+                      textCapitalization: TextCapitalization.words,
                       decoration: InputDecoration(
                         labelText: 'Lembrete (ex: Aluguel vence hoje)',
                         labelStyle: TextStyle(
