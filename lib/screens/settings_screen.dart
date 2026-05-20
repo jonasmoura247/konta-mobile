@@ -1363,7 +1363,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               leading: const Icon(Icons.new_releases_outlined, color: AppColors.accent),
               title: Text('Últimas Atualizações',
                   style: TextStyle(color: context.kTextPrimary)),
-              subtitle: Text('v$kAppVersion — veja o que há de novo',
+              subtitle: Text('v$kAppVersion — Veja o que há de novo',
                   style: TextStyle(color: context.kTextSecondary, fontSize: 12)),
               trailing: Icon(Icons.chevron_right, color: context.kTextSecondary),
               onTap: () => Navigator.of(context).push(

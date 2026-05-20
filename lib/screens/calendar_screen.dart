@@ -377,7 +377,7 @@ class _DayModalState extends State<_DayModal> {
         bankColor: bank.color,
         initialDay: selectedDay,
         maxDay: lastDay,
-        label: 'pagamento',
+        label: 'Pagamento',
       ),
     );
     if (confirmed != null && confirmed != cdd?.paymentDayFor(month)) {
