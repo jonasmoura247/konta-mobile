@@ -9,6 +9,7 @@ import '../services/finance_calculator.dart';
 import '../services/notification_service.dart';
 import '../theme/app_theme.dart';
 import '../utils/formatters.dart';
+import '../utils/text_formatters.dart';
 
 class CalendarScreen extends StatefulWidget {
   const CalendarScreen({super.key});
@@ -587,7 +588,8 @@ class _DayModalState extends State<_DayModal> {
                     TextField(
                       controller: _descCtrl,
                       style: TextStyle(color: context.kTextPrimary),
-                      textCapitalization: TextCapitalization.words,
+                      textCapitalization: TextCapitalization.sentences,
+                      inputFormatters: [CapitalizeFirstFormatter()],
                       decoration: InputDecoration(
                         labelText: 'Lembrete (ex: Aluguel vence hoje)',
                         labelStyle: TextStyle(

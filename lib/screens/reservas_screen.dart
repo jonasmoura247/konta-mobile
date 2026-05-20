@@ -8,6 +8,7 @@ import '../services/database_service.dart';
 import '../services/finance_calculator.dart';
 import '../theme/app_theme.dart';
 import '../utils/formatters.dart';
+import '../utils/text_formatters.dart';
 import '../widgets/reserve_card.dart';
 import '../widgets/reserve_donut_chart.dart';
 import '../widgets/reserve_evolution_chart.dart';
@@ -414,7 +415,8 @@ class _ReserveFormState extends State<_ReserveForm> {
               TextFormField(
                 controller: _descCtrl,
                 style: TextStyle(color: context.kTextPrimary),
-                textCapitalization: TextCapitalization.words,
+                textCapitalization: TextCapitalization.sentences,
+                inputFormatters: [CapitalizeFirstFormatter()],
                 decoration: const InputDecoration(labelText: 'Descrição'),
                 validator: (v) => (v == null || v.trim().isEmpty) ? 'Obrigatório' : null,
               ),
@@ -826,6 +828,7 @@ class _GoalFormState extends State<_GoalForm> {
                 controller: _nameCtrl,
                 style: TextStyle(color: context.kTextPrimary),
                 textCapitalization: TextCapitalization.words,
+                inputFormatters: [CapitalizeFirstFormatter()],
                 decoration: const InputDecoration(labelText: 'Nome da meta (ex: Comprar um carro)'),
                 validator: (v) => (v == null || v.trim().isEmpty) ? 'Obrigatório' : null,
               ),

@@ -10,6 +10,7 @@ import '../services/database_service.dart';
 import '../services/finance_calculator.dart';
 import '../theme/app_theme.dart';
 import '../utils/formatters.dart';
+import '../utils/text_formatters.dart';
 import '../utils/keyboard_restore_mixin.dart';
 
 enum SubscriptionEditScope { fromStart, fromMonth }
@@ -459,7 +460,8 @@ class _AddTransactionFormState extends State<AddTransactionForm>
                 controller: _descCtrl,
                 focusNode: _descFocus,
                 style: TextStyle(color: context.kTextPrimary),
-                textCapitalization: TextCapitalization.words,
+                textCapitalization: TextCapitalization.sentences,
+                inputFormatters: [CapitalizeFirstFormatter()],
                 decoration: const InputDecoration(labelText: 'Descrição'),
                 validator: (v) =>
                     (v == null || v.trim().isEmpty) ? 'Obrigatório' : null,

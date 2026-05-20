@@ -10,6 +10,7 @@ import '../services/backup_service.dart';
 import '../services/import_service.dart';
 import '../theme/app_theme.dart';
 import '../utils/privacy_policy_text.dart';
+import '../utils/text_formatters.dart';
 import 'card_due_dates_screen.dart';
 import 'changelog_screen.dart';
 import 'achievements_screen.dart';
@@ -226,6 +227,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     controller: nameCtrl,
                     style: TextStyle(color: ctx.kTextPrimary),
                     textCapitalization: TextCapitalization.words,
+                    inputFormatters: [CapitalizeFirstFormatter()],
                     decoration: InputDecoration(
                       labelText: 'Nome',
                       labelStyle: TextStyle(color: ctx.kTextSecondary),
@@ -353,6 +355,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 controller: nameCtrl,
                 style: TextStyle(color: ctx.kTextPrimary),
                 textCapitalization: TextCapitalization.words,
+                inputFormatters: [CapitalizeFirstFormatter()],
                 decoration: InputDecoration(
                   labelText: 'Nome',
                   labelStyle: TextStyle(color: ctx.kTextSecondary),
@@ -447,6 +450,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 controller: nameCtrl,
                 style: TextStyle(color: ctx.kTextPrimary),
                 textCapitalization: TextCapitalization.words,
+                inputFormatters: [CapitalizeFirstFormatter()],
                 decoration: InputDecoration(
                   labelText: 'Nome',
                   labelStyle: TextStyle(color: ctx.kTextSecondary),
@@ -516,6 +520,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 controller: nameCtrl,
                 style: TextStyle(color: ctx.kTextPrimary),
                 textCapitalization: TextCapitalization.words,
+                inputFormatters: [CapitalizeFirstFormatter()],
                 decoration: InputDecoration(
                   labelText: 'Nome (ex: Bradesco)',
                   labelStyle: TextStyle(color: ctx.kTextSecondary),

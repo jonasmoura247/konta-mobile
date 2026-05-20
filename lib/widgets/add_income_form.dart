@@ -4,6 +4,7 @@ import 'package:uuid/uuid.dart';
 import '../models/income.dart';
 import '../theme/app_theme.dart';
 import '../utils/formatters.dart';
+import '../utils/text_formatters.dart';
 import '../utils/keyboard_restore_mixin.dart';
 
 class AddIncomeForm extends StatefulWidget {
@@ -132,7 +133,8 @@ class _AddIncomeFormState extends State<AddIncomeForm>
                 controller: _descCtrl,
                 focusNode: _descFocus,
                 style: TextStyle(color: context.kTextPrimary),
-                textCapitalization: TextCapitalization.words,
+                textCapitalization: TextCapitalization.sentences,
+                inputFormatters: [CapitalizeFirstFormatter()],
                 decoration: const InputDecoration(labelText: 'Descrição', hintText: 'Ex: Salário, Freelance...'),
                 validator: (v) => (v == null || v.trim().isEmpty) ? 'Obrigatório' : null,
               ),
