@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../screens/achievements_screen.dart';
 import '../services/database_service.dart';
 import '../services/finance_calculator.dart';
 import '../services/month_selection_service.dart';
@@ -289,6 +290,13 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                       ),
                       const SizedBox(height: 20),
 
+                      // ── Streak widget ────────────────────────────────────────
+                      _StreakWidget(onTap: () {
+                        Navigator.of(context).push(MaterialPageRoute(
+                          builder: (_) => const AchievementsScreen(),
+                        ));
+                      }),
+
                       // ── Banner Vista Família ─────────────────────────────────
                       if (_familyView) ...[
                         Container(
@@ -515,6 +523,63 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       floatingActionButton: FloatingActionButton(
         onPressed: _openAddTransaction,
         child: const Icon(Icons.add),
+      ),
+    );
+  }
+}
+
+class _StreakWidget extends StatelessWidget {
+  final VoidCallback onTap;
+  const _StreakWidget({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final streak = DatabaseService.getStreak();
+    if (streak.currentStreak < 2) return const SizedBox.shrink();
+
+    final showRecord = streak.longestStreak > streak.currentStreak;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          decoration: BoxDecoration(
+            color: const Color(0xFF1A1A2E),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+                color: AppColors.warning.withValues(alpha: 0.4)),
+          ),
+          child: Row(
+            children: [
+              const Text('🔥', style: TextStyle(fontSize: 18)),
+              const SizedBox(width: 8),
+              Text(
+                '${streak.currentStreak} dias seguidos',
+                style: const TextStyle(
+                  color: AppColors.warning,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 13,
+                ),
+              ),
+              if (showRecord) ...[
+                const SizedBox(width: 10),
+                Text(
+                  '🏆 Recorde: ${streak.longestStreak} dias',
+                  style: TextStyle(
+                    color: context.kTextSecondary,
+                    fontSize: 11,
+                  ),
+                ),
+              ],
+              const Spacer(),
+              Icon(Icons.chevron_right,
+                  size: 16, color: context.kTextSecondary),
+            ],
+          ),
+        ),
       ),
     );
   }

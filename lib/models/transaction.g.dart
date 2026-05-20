@@ -32,7 +32,7 @@ class TransactionAdapter extends TypeAdapter<Transaction> {
       createdAt: fields[12] as DateTime,
       subscriptionSeriesId: fields[13] as String?,
       paymentSubtype: fields[14] as String?,
-      applyClosureDate: fields[15] == null ? false : fields[15] as bool,
+      applyClosureDate: fields[15] as bool? ?? false,
       invoiceMonth: fields[16] as DateTime?,
     );
   }

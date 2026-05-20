@@ -9,6 +9,9 @@ import '../models/reserve_snapshot.dart';
 import '../models/reminder.dart';
 import '../models/goal.dart';
 import '../models/card_due_date.dart';
+import '../models/achievement.dart';
+import '../models/streak_data.dart';
+import 'gamification_service.dart';
 
 class DatabaseService {
   // Incrementado sempre que dados críticos mudam (limpar, importar).
@@ -25,6 +28,8 @@ class DatabaseService {
   static Box<Reminder> get remindersBox => Hive.box<Reminder>('reminders');
   static Box<Goal> get goalsBox => Hive.box<Goal>('goals');
   static Box<CardDueDate> get cardDueDateBox => Hive.box<CardDueDate>('card_due_dates');
+  static Box<Achievement> get achievementsBox => Hive.box<Achievement>('achievements');
+  static Box<StreakData> get streakBox => Hive.box<StreakData>('streak');
 
   // --- META: Custom Categories ---
 
@@ -37,6 +42,7 @@ class DatabaseService {
       List<Map<String, dynamic>> cats) async {
     await metaBox.put('custom_categories', jsonEncode(cats));
     _notify();
+    GamificationService.evaluateAfterCustomization(isCategory: true).ignore();
   }
 
   // --- META: Custom Banks ---
@@ -49,6 +55,7 @@ class DatabaseService {
   static Future<void> saveCustomBanks(List<Map<String, dynamic>> banks) async {
     await metaBox.put('custom_banks', jsonEncode(banks));
     _notify();
+    GamificationService.evaluateAfterCustomization(isBank: true).ignore();
   }
 
   // --- META: Hidden Banks ---
@@ -219,16 +226,19 @@ class DatabaseService {
   static Future<void> addTransaction(Transaction t) async {
     await txBox.add(t);
     _notify();
+    GamificationService.evaluateAfterTransaction(t).ignore();
   }
 
   static Future<void> updateTransaction(Transaction t) async {
     await _putById(txBox, t.id, t, (item) => item.id);
     _notify();
+    GamificationService.evaluateAfterTransaction(t, isEdit: true).ignore();
   }
 
   static Future<void> deleteTransaction(Transaction t) async {
     await _deleteById(txBox, t.id, (item) => item.id);
     _notify();
+    GamificationService.evaluateAfterTransaction(t, isDelete: true).ignore();
   }
 
   // --- INCOMES ---
@@ -238,6 +248,7 @@ class DatabaseService {
   static Future<void> addIncome(Income i) async {
     await incomeBox.add(i);
     _notify();
+    GamificationService.evaluateAfterIncome(i).ignore();
   }
 
   static Future<void> updateIncome(Income i) async {
@@ -264,6 +275,7 @@ class DatabaseService {
       type: r.type,
     ));
     _notify();
+    GamificationService.evaluateAfterReserveChange().ignore();
   }
 
   static Future<void> updateReserve(Reserve r) async {
@@ -275,6 +287,7 @@ class DatabaseService {
       type: r.type,
     ));
     _notify();
+    GamificationService.evaluateAfterReserveChange().ignore();
   }
 
   static Future<void> deleteReserve(Reserve r) async {
@@ -332,11 +345,13 @@ class DatabaseService {
   static Future<void> addGoal(Goal g) async {
     await goalsBox.add(g);
     _notify();
+    GamificationService.evaluateAfterGoalChange().ignore();
   }
 
   static Future<void> updateGoal(Goal g) async {
     await _putById(goalsBox, g.id, g, (item) => item.id);
     _notify();
+    GamificationService.evaluateAfterGoalChange().ignore();
   }
 
   static Future<void> deleteGoal(Goal g) async {
@@ -448,6 +463,7 @@ class DatabaseService {
       await cardDueDateBox.add(cdd);
     }
     _notify();
+    GamificationService.evaluateAfterCardChange().ignore();
   }
 
   static Future<void> setCardClosureOverride(String bankId, DateTime month, int day) async {
@@ -456,6 +472,7 @@ class DatabaseService {
     cdd.setClosureOverride(month, day);
     await cdd.save();
     _notify();
+    GamificationService.evaluateAfterCardOverride().ignore();
   }
 
   static Future<void> setCardPaymentOverride(String bankId, DateTime month, int day) async {
@@ -472,6 +489,65 @@ class DatabaseService {
       await cdd.delete();
       _notify();
     }
+  }
+
+  // --- ACHIEVEMENTS ---
+
+  static List<Achievement> getAllAchievements() => achievementsBox.values.toList();
+
+  static List<Achievement> getUnlockedAchievements() =>
+      achievementsBox.values.where((a) => a.unlocked).toList();
+
+  static Future<void> unlockAchievement(String id) async {
+    final ach = achievementsBox.values.where((a) => a.id == id).firstOrNull;
+    if (ach == null || ach.unlocked) return;
+    ach.unlocked = true;
+    ach.unlockedAt = DateTime.now();
+    await ach.save();
+  }
+
+  static Future<void> setAchievementProgress(String id, int value) async {
+    final ach = achievementsBox.values.where((a) => a.id == id).firstOrNull;
+    if (ach == null || ach.unlocked) return;
+    ach.progress = value;
+    await ach.save();
+  }
+
+  // --- STREAK ---
+
+  static StreakData getStreak() {
+    if (streakBox.isEmpty) {
+      final s = StreakData();
+      streakBox.add(s);
+      return s;
+    }
+    return streakBox.getAt(0)!;
+  }
+
+  static Future<void> updateStreak() async {
+    final streak = getStreak();
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final last = streak.lastActiveDay;
+
+    if (last != null) {
+      final lastDay = DateTime(last.year, last.month, last.day);
+      if (lastDay == today) return; // já registrou hoje
+      final diff = today.difference(lastDay).inDays;
+      if (diff == 1) {
+        streak.currentStreak++;
+      } else {
+        streak.currentStreak = 1;
+      }
+    } else {
+      streak.currentStreak = 1;
+    }
+
+    if (streak.currentStreak > streak.longestStreak) {
+      streak.longestStreak = streak.currentStreak;
+    }
+    streak.lastActiveDay = today;
+    await streak.save();
   }
 }
 

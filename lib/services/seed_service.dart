@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/services.dart';
+import '../models/achievement.dart';
 import '../models/app_settings.dart';
 import '../models/category.dart';
 import 'database_service.dart';
@@ -70,6 +71,71 @@ class SeedService {
           ['Eu', 'Parceiro(a)'],
     );
     await DatabaseService.saveSettings(settings);
+  }
+
+  /// Carrega achievements do JSON, preservando unlocked/unlockedAt existentes.
+  /// Só persiste se o metadado mudou (evita 100 writes a cada startup).
+  static Future<void> loadAchievements() async {
+    final String raw;
+    try {
+      raw = await rootBundle.loadString('assets/data/achievements.json');
+    } catch (_) {
+      return;
+    }
+
+    final List<dynamic> list;
+    try {
+      list = jsonDecode(raw) as List<dynamic>;
+    } catch (_) {
+      return;
+    }
+
+    final box = DatabaseService.achievementsBox;
+    final existing = {for (final a in box.values) a.id: a};
+
+    for (final item in list) {
+      try {
+        final map = item as Map<String, dynamic>;
+        final id = map['id'] as String;
+        final title = map['title'] as String;
+        final description = map['description'] as String;
+        final stars = (map['stars'] as num).toInt();
+        final hidden = map['hidden'] as bool? ?? false;
+        final criteria = map['criteria'] as String;
+        final goal = (map['goal'] as num?)?.toInt();
+
+        final prev = existing[id];
+        if (prev != null) {
+          // Só salva se algo mudou — evita writes desnecessários a cada startup
+          if (prev.title != title ||
+              prev.description != description ||
+              prev.stars != stars ||
+              prev.hidden != hidden ||
+              prev.criteria != criteria ||
+              prev.goal != goal) {
+            prev.title = title;
+            prev.description = description;
+            prev.stars = stars;
+            prev.hidden = hidden;
+            prev.criteria = criteria;
+            prev.goal = goal;
+            await prev.save();
+          }
+        } else {
+          await box.add(Achievement(
+            id: id,
+            title: title,
+            description: description,
+            stars: stars,
+            hidden: hidden,
+            criteria: criteria,
+            goal: goal,
+          ));
+        }
+      } catch (_) {
+        continue;
+      }
+    }
   }
 
   /// Renomeia nomes de bancos antigos (marcas) para genéricos.

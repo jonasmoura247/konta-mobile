@@ -11,12 +11,26 @@ import 'screens/privacy_policy_screen.dart';
 import 'services/database_service.dart';
 import 'services/backup_service.dart';
 import 'services/month_selection_service.dart';
+import 'services/notification_service.dart';
 import 'theme/app_theme.dart';
 
-const kAppVersion = '1.0.9';
+const kAppVersion = '1.2.1';
+
+final globalScaffoldMessengerKey = GlobalKey<ScaffoldMessengerState>();
 
 /// Histórico de changelogs por versão (mais recente primeiro).
 const kChangelog = <String, List<String>>{
+  '1.2.1': [
+    'Correção de crash ao abrir o app após atualização (dados antigos de lançamentos).',
+  ],
+  '1.2.0': [
+    'Conquistas: 100 achievements desbloqueáveis conforme você usa o Konta.',
+    'Streak no Dashboard: veja quantos dias seguidos você está registrando.',
+    'Insights financeiros: análise mensal e anual em Histórico → aba Insights.',
+    'Backup automático: salve um arquivo JSON em qualquer pasta do celular.',
+    'Ordenação de lançamentos: data, valor, nome, tipo, categoria ou manual.',
+    'Correção de estabilidade no Android 14+.',
+  ],
   '1.0.9': [
     'Lançamentos: segure o ícone ≡ ao lado dos 3 pontinhos e arraste para reorganizar.',
     'A ordem é salva automaticamente por aba (Todos, Crédito, Débito, Pix, Dinheiro).',
@@ -61,6 +75,7 @@ class KontaApp extends StatelessWidget {
     return ValueListenableBuilder<ThemeMode>(
       valueListenable: themeNotifier,
       builder: (_, mode, __) => MaterialApp.router(
+        scaffoldMessengerKey: globalScaffoldMessengerKey,
         title: 'Konta',
         debugShowCheckedModeBanner: false,
         locale: const Locale('pt', 'BR'),
@@ -129,7 +144,10 @@ class _ShellState extends State<_Shell> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _checkFirstRunBackup());
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkFirstRunBackup();
+      NotificationService.requestPermission();
+    });
   }
 
   Future<void> _checkFirstRunBackup() async {

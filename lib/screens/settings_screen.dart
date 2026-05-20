@@ -5,12 +5,14 @@ import '../models/app_settings.dart';
 import '../models/category.dart';
 import '../models/bank.dart';
 import '../services/database_service.dart';
+import '../services/gamification_service.dart';
 import '../services/backup_service.dart';
 import '../services/import_service.dart';
 import '../theme/app_theme.dart';
 import '../utils/privacy_policy_text.dart';
 import 'card_due_dates_screen.dart';
 import 'changelog_screen.dart';
+import 'achievements_screen.dart';
 
 // ───────────────────────────────────────────────────────── color palette ──
 const List<Color> _kPalette = [
@@ -184,6 +186,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Future<void> _save() async {
     await DatabaseService.saveSettings(_settings);
+    GamificationService.evaluateAfterSettingsChange().ignore();
     setState(() {});
   }
 
@@ -606,19 +609,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
               children: [
                 Text('Tipo', style: TextStyle(color: ctx.kTextSecondary, fontSize: 12)),
                 const SizedBox(height: 8),
-                ...BackupRuleType.values
-                    .where((t) => t != BackupRuleType.manual)
-                    .map((t) => RadioListTile<BackupRuleType>(
-                          dense: true,
-                          contentPadding: EdgeInsets.zero,
-                          title: Text(_ruleTypeName(t),
-                              style: TextStyle(
-                                  color: ctx.kTextPrimary, fontSize: 13)),
-                          value: t,
-                          groupValue: selectedType,
-                          activeColor: AppColors.accent,
-                          onChanged: (v) => setSt(() => selectedType = v!),
-                        )),
+                RadioGroup<BackupRuleType>(
+                  groupValue: selectedType,
+                  onChanged: (v) { if (v != null) setSt(() => selectedType = v); },
+                  child: Column(
+                    children: BackupRuleType.values
+                        .where((t) => t != BackupRuleType.manual)
+                        .map((t) => RadioListTile<BackupRuleType>(
+                              dense: true,
+                              contentPadding: EdgeInsets.zero,
+                              title: Text(_ruleTypeName(t),
+                                  style: TextStyle(
+                                      color: ctx.kTextPrimary, fontSize: 13)),
+                              value: t,
+                              activeColor: AppColors.accent,
+                            ))
+                        .toList(),
+                  ),
+                ),
                 if (selectedType == BackupRuleType.scheduled ||
                     selectedType == BackupRuleType.weekly) ...[
                   const SizedBox(height: 12),
@@ -867,6 +875,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ]),
 
           // ── Metas ─────────────────────────────────────────────────
+          // ── Conquistas ────────────────────────────────────────────
+          const SizedBox(height: 20),
+          _SectionTitle('Conquistas'),
+          _Card(children: [
+            ListTile(
+              leading: const Icon(Icons.emoji_events_outlined,
+                  color: AppColors.accent),
+              title: Text('Conquistas',
+                  style: TextStyle(color: context.kTextPrimary)),
+              subtitle: Text('Veja suas conquistas e progresso',
+                  style: TextStyle(color: context.kTextSecondary, fontSize: 12)),
+              trailing: Icon(Icons.chevron_right, color: context.kTextSecondary),
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const AchievementsScreen()),
+              ),
+            ),
+          ]),
+
           const SizedBox(height: 20),
           _SectionTitle('Metas'),
           _Card(children: [

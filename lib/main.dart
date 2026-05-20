@@ -10,6 +10,8 @@ import 'models/reserve_snapshot.dart';
 import 'models/reminder.dart';
 import 'models/goal.dart';
 import 'models/card_due_date.dart';
+import 'models/achievement.dart';
+import 'models/streak_data.dart';
 import 'services/database_service.dart';
 import 'services/notification_service.dart';
 import 'services/backup_service.dart';
@@ -31,6 +33,8 @@ void main() async {
   Hive.registerAdapter(ReminderAdapter());
   Hive.registerAdapter(GoalAdapter());
   Hive.registerAdapter(CardDueDateAdapter());
+  Hive.registerAdapter(AchievementAdapter());
+  Hive.registerAdapter(StreakDataAdapter());
 
   await Future.wait([
     Hive.openBox<Transaction>('transactions'),
@@ -42,9 +46,12 @@ void main() async {
     Hive.openBox<Reminder>('reminders'),
     Hive.openBox<Goal>('goals'),
     Hive.openBox<CardDueDate>('card_due_dates'),
+    Hive.openBox<Achievement>('achievements'),
+    Hive.openBox<StreakData>('streak'),
   ]);
 
   await SeedService.seedIfEmpty();
+  await SeedService.loadAchievements();
   await NotificationService.init();
   BackupService.init();
 

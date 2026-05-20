@@ -64,23 +64,23 @@ class _TransactionsScreenState extends State<TransactionsScreen>
   // ── Estado dos filtros ────────────────────────────────────────────────────
   String _todosFilterCat = 'all';
   String _todosFilterBank = 'all';
-  TxSort _todosSortBy = TxSort.dateAsc;
+  TxSort _todosSortBy = TxSort.dateDesc;
 
   String _cartaoCreditFilterGroup = 'all';
   String _cartaoCreditFilterCat = 'all';
   String _cartaoCreditFilterBank = 'all';
-  TxSort _cartaoCreditSortBy = TxSort.dateAsc;
+  TxSort _cartaoCreditSortBy = TxSort.dateDesc;
 
   String _cartaoDebitFilterCat = 'all';
   String _cartaoDebitFilterBank = 'all';
-  TxSort _cartaoDebitSortBy = TxSort.dateAsc;
+  TxSort _cartaoDebitSortBy = TxSort.dateDesc;
 
   String _pixFilterCat = 'all';
   String _pixFilterBank = 'all';
-  TxSort _pixSortBy = TxSort.dateAsc;
+  TxSort _pixSortBy = TxSort.dateDesc;
 
   String _dinheiroFilterCat = 'all';
-  TxSort _dinheiroSortBy = TxSort.dateAsc;
+  TxSort _dinheiroSortBy = TxSort.dateDesc;
 
   DateTime _monthStart(DateTime date) => MonthSelectionService.normalize(date);
   DateTime _nextMonthStart(DateTime date) => DateTime(date.year, date.month + 1);
@@ -342,79 +342,63 @@ class _TransactionsScreenState extends State<TransactionsScreen>
   bool get _todosHasFilters =>
       _todosFilterCat != 'all' ||
       _todosFilterBank != 'all' ||
-      _todosSortBy != TxSort.dateAsc;
+      _todosSortBy != TxSort.dateDesc;
 
   bool get _cartaoCreditHasFilters =>
       _cartaoCreditFilterGroup != 'all' ||
       _cartaoCreditFilterCat != 'all' ||
       _cartaoCreditFilterBank != 'all' ||
-      _cartaoCreditSortBy != TxSort.dateAsc;
+      _cartaoCreditSortBy != TxSort.dateDesc;
 
   bool get _cartaoDebitHasFilters =>
       _cartaoDebitFilterCat != 'all' ||
       _cartaoDebitFilterBank != 'all' ||
-      _cartaoDebitSortBy != TxSort.dateAsc;
+      _cartaoDebitSortBy != TxSort.dateDesc;
 
   bool get _pixHasFilters =>
       _pixFilterCat != 'all' ||
       _pixFilterBank != 'all' ||
-      _pixSortBy != TxSort.dateAsc;
+      _pixSortBy != TxSort.dateDesc;
 
   bool get _dinheiroHasFilters =>
-      _dinheiroFilterCat != 'all' || _dinheiroSortBy != TxSort.dateAsc;
+      _dinheiroFilterCat != 'all' || _dinheiroSortBy != TxSort.dateDesc;
 
-  TxSort get _currentSort => switch (_tabCtrl.index) {
-        0 => _todosSortBy,
-        1 => _cartaoSubCtrl.index == 0 ? _cartaoCreditSortBy : _cartaoDebitSortBy,
-        2 => _pixSortBy,
-        3 => _dinheiroSortBy,
-        _ => TxSort.dateAsc,
-      };
-
-  String _currentTabKey() => switch (_tabCtrl.index) {
-        0 => 'todos',
-        1 => _cartaoSubCtrl.index == 0 ? 'cartao_credit' : 'cartao_debit',
-        2 => 'pix',
-        3 => 'dinheiro',
-        _ => '',
+  TxSort _sortForTabKey(String tabKey) => switch (tabKey) {
+        'todos'         => _todosSortBy,
+        'cartao_credit' => _cartaoCreditSortBy,
+        'cartao_debit'  => _cartaoDebitSortBy,
+        'pix'           => _pixSortBy,
+        'dinheiro'      => _dinheiroSortBy,
+        _               => TxSort.dateDesc,
       };
 
   void _clearCurrentFilters() {
-    final tabKey = _currentTabKey();
     setState(() {
       switch (_tabCtrl.index) {
         case 0:
           _todosFilterCat = 'all';
           _todosFilterBank = 'all';
-          _todosSortBy = TxSort.dateAsc;
-          _txOrders['todos'] = [];
+          _todosSortBy = TxSort.dateDesc;
         case 1:
           if (_cartaoSubCtrl.index == 0) {
             _cartaoCreditFilterGroup = 'all';
             _cartaoCreditFilterCat = 'all';
             _cartaoCreditFilterBank = 'all';
-            _cartaoCreditSortBy = TxSort.dateAsc;
-            _txOrders['cartao_credit'] = [];
+            _cartaoCreditSortBy = TxSort.dateDesc;
           } else {
             _cartaoDebitFilterCat = 'all';
             _cartaoDebitFilterBank = 'all';
-            _cartaoDebitSortBy = TxSort.dateAsc;
-            _txOrders['cartao_debit'] = [];
+            _cartaoDebitSortBy = TxSort.dateDesc;
           }
         case 2:
           _pixFilterCat = 'all';
           _pixFilterBank = 'all';
-          _pixSortBy = TxSort.dateAsc;
-          _txOrders['pix'] = [];
+          _pixSortBy = TxSort.dateDesc;
         case 3:
           _dinheiroFilterCat = 'all';
-          _dinheiroSortBy = TxSort.dateAsc;
-          _txOrders['dinheiro'] = [];
+          _dinheiroSortBy = TxSort.dateDesc;
       }
     });
-    if (tabKey.isNotEmpty) {
-      unawaited(DatabaseService.saveTransactionOrder(tabKey, []));
-    }
   }
 
   void _showFilterSheet() {
@@ -839,9 +823,13 @@ class _TransactionsScreenState extends State<TransactionsScreen>
     BuildContext context, {
     required List<TransactionOccurrence> filtered,
     required bool hasFilters,
+    String tabKey = '',
   }) {
     final currency = DatabaseService.getSettings().currency;
     final total = filtered.fold<double>(0, (s, o) => s + o.amount);
+    final currentSort = _sortForTabKey(tabKey);
+    final hasManualOrder = (_txOrders[tabKey] ?? []).isNotEmpty;
+    final showManualBtn = hasManualOrder && currentSort != TxSort.manual;
 
     return Container(
       color: context.kBg,
@@ -879,9 +867,9 @@ class _TransactionsScreenState extends State<TransactionsScreen>
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
                       )),
-                  if (hasFilters && _currentSort != TxSort.manual) ...[
+                  if (hasFilters && currentSort != TxSort.manual) ...[
                     const SizedBox(width: 6),
-                    Text('· ${_currentSort.label}',
+                    Text('· ${currentSort.label}',
                         style: TextStyle(
                             color: AppColors.accent.withValues(alpha: 0.8),
                             fontSize: 10)),
@@ -905,6 +893,26 @@ class _TransactionsScreenState extends State<TransactionsScreen>
                 child: const Text('Limpar',
                     style: TextStyle(
                         color: AppColors.expense,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600)),
+              ),
+            ),
+          ],
+          if (showManualBtn) ...[
+            const SizedBox(width: 8),
+            GestureDetector(
+              onTap: () => setState(() => _setSortManual(tabKey)),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                decoration: BoxDecoration(
+                  color: AppColors.warning.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                      color: AppColors.warning.withValues(alpha: 0.5)),
+                ),
+                child: const Text('Manual',
+                    style: TextStyle(
+                        color: AppColors.warning,
                         fontSize: 12,
                         fontWeight: FontWeight.w600)),
               ),
@@ -1048,6 +1056,7 @@ class _TransactionsScreenState extends State<TransactionsScreen>
           filtered: subIdx == 0 ? creditFiltered : debitFiltered,
           hasFilters:
               subIdx == 0 ? _cartaoCreditHasFilters : _cartaoDebitHasFilters,
+          tabKey: subIdx == 0 ? 'cartao_credit' : 'cartao_debit',
         ),
         Expanded(
           child: TabBarView(
@@ -1158,7 +1167,7 @@ class _TransactionsScreenState extends State<TransactionsScreen>
           Column(
             children: [
               _buildFilterBar(context,
-                  filtered: allFiltered, hasFilters: _todosHasFilters),
+                  filtered: allFiltered, hasFilters: _todosHasFilters, tabKey: 'todos'),
               Expanded(
                 child: _buildList(context, allFiltered,
                     hasFilters: _todosHasFilters, tabKey: 'todos'),
@@ -1173,7 +1182,7 @@ class _TransactionsScreenState extends State<TransactionsScreen>
           Column(
             children: [
               _buildFilterBar(context,
-                  filtered: pixFiltered, hasFilters: _pixHasFilters),
+                  filtered: pixFiltered, hasFilters: _pixHasFilters, tabKey: 'pix'),
               Expanded(
                 child: _buildList(context, pixFiltered,
                     emptyEmoji: '📱',
@@ -1188,7 +1197,7 @@ class _TransactionsScreenState extends State<TransactionsScreen>
           Column(
             children: [
               _buildFilterBar(context,
-                  filtered: dinheiroFiltered, hasFilters: _dinheiroHasFilters),
+                  filtered: dinheiroFiltered, hasFilters: _dinheiroHasFilters, tabKey: 'dinheiro'),
               Expanded(
                 child: _buildList(context, dinheiroFiltered,
                     emptyEmoji: '💵',

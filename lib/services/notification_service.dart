@@ -5,18 +5,25 @@ import 'package:timezone/data/latest.dart' as tzdata;
 class NotificationService {
   static final _plugin = FlutterLocalNotificationsPlugin();
 
+  /// Inicializa o plugin de notificações. Deve ser chamado em main() antes de runApp().
+  /// A solicitação de permissão NÃO é feita aqui — use [requestPermission] depois
+  /// do primeiro frame renderizado para evitar travamento no Android 15+.
   static Future<void> init() async {
     tzdata.initializeTimeZones();
 
     const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
     const iosSettings = DarwinInitializationSettings(
-      requestAlertPermission: true,
-      requestBadgePermission: true,
-      requestSoundPermission: true,
+      requestAlertPermission: false,
+      requestBadgePermission: false,
+      requestSoundPermission: false,
     );
     const settings = InitializationSettings(android: androidSettings, iOS: iosSettings);
     await _plugin.initialize(settings);
+  }
 
+  /// Solicita permissão de notificação ao usuário.
+  /// Deve ser chamado APÓS runApp(), quando o app já tem uma Activity ativa.
+  static Future<void> requestPermission() async {
     await _plugin
         .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
         ?.requestNotificationsPermission();
