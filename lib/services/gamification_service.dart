@@ -34,6 +34,7 @@ class GamificationService {
       'tx_count_25': txCount >= 25,
       'tx_count_50': txCount >= 50,
       'tx_count_100': txCount >= 100,
+      'tx_count_200': txCount >= 200,
       'tx_count_250': txCount >= 250,
       'tx_count_500': txCount >= 500,
       'first_debit': t.groupId == 'debito',
@@ -48,7 +49,6 @@ class GamificationService {
       'tx_amount_5000': t.totalAmount >= 5000,
       'tx_installment_12x':
           t.groupId == 'parcelamento' && t.installments >= 12,
-      'installment_12x': t.groupId == 'parcelamento' && t.installments >= 12,
       'first_closure': t.applyClosureDate,
       'installment_count_5': installments.length >= 5,
       'installment_count_10': installments.length >= 10,
@@ -64,6 +64,8 @@ class GamificationService {
       'credit_count_10': credits.length >= 10,
       'credit_count_25': credits.length >= 25,
       'credit_count_50': credits.length >= 50,
+      'credit_count_75': credits.length >= 75,
+      'family_tx_count_75': familyTxs.length >= 75,
     };
 
     if (isEdit) {
@@ -90,6 +92,7 @@ class GamificationService {
     await _updateProgress('tx_count_25', txCount, 25);
     await _updateProgress('tx_count_50', txCount, 50);
     await _updateProgress('tx_count_100', txCount, 100);
+    await _updateProgress('tx_count_200', txCount, 200);
     await _updateProgress('tx_count_250', txCount, 250);
     await _updateProgress('tx_count_500', txCount, 500);
     await _updateProgress('installment_count_5', installments.length, 5);
@@ -100,6 +103,8 @@ class GamificationService {
     await _updateProgress('credit_count_10', credits.length, 10);
     await _updateProgress('credit_count_25', credits.length, 25);
     await _updateProgress('credit_count_50', credits.length, 50);
+    await _updateProgress('credit_count_75', credits.length, 75);
+    await _updateProgress('family_tx_count_75', familyTxs.length, 75);
     await _updateProgress('edit_count_10', _getMeta('edit_count'), 10);
     await _updateProgress('delete_count_5', _getMeta('delete_count'), 5);
 
@@ -115,6 +120,7 @@ class GamificationService {
       'first_income': incomeCount >= 1,
       'income_count_5': incomeCount >= 5,
       'income_count_10': incomeCount >= 10,
+      'income_count_15': incomeCount >= 15,
       'income_recurring': i.recurring,
       'income_high_5000': i.amount >= 5000,
       'family_income_5000': i.isFamilyValue && i.amount >= 5000,
@@ -123,6 +129,7 @@ class GamificationService {
 
     await _updateProgress('income_count_5', incomeCount, 5);
     await _updateProgress('income_count_10', incomeCount, 10);
+    await _updateProgress('income_count_15', incomeCount, 15);
 
     await _evaluateAndNotify(toEval);
     await _evaluateSpendingAndBalance();
@@ -145,6 +152,7 @@ class GamificationService {
       'reserve_type_other': all.any((r) => r.type == 'outro'),
       'reserve_first_update': updateCount >= 1,
       'reserve_update_count_5': updateCount >= 5,
+      'reserve_update_count_10': updateCount >= 10,
       'reserve_amount_1000': maxAmount >= 1000,
       'reserve_amount_10000': maxAmount >= 10000,
       'reserve_amount_100000': maxAmount >= 100000,
@@ -156,6 +164,7 @@ class GamificationService {
     await _updateProgress('reserve_count_3', count, 3);
     await _updateProgress('reserve_count_5', count, 5);
     await _updateProgress('reserve_update_count_5', updateCount, 5);
+    await _updateProgress('reserve_update_count_10', updateCount, 10);
 
     await _evaluateAndNotify(toEval);
   }
@@ -169,11 +178,13 @@ class GamificationService {
       'first_goal': count >= 1,
       'goal_count_3': count >= 3,
       'goal_count_5': count >= 5,
+      'goal_count_10': count >= 10,
       'goal_first_deposit': all.any((g) => g.savedAmount > 0),
       'goal_50pct': all.any((g) => g.targetAmount > 0 && g.savedAmount / g.targetAmount >= 0.5),
       'goal_reached': reachedCount >= 1,
       'goal_reached_3': reachedCount >= 3,
       'goal_reached_5': reachedCount >= 5,
+      'goal_reached_10': reachedCount >= 10,
       'goal_target_5000': all.any((g) => g.targetAmount >= 5000),
       'goal_target_20000': all.any((g) => g.targetAmount >= 20000),
       'goal_target_100000': all.any((g) => g.targetAmount >= 100000),
@@ -182,8 +193,10 @@ class GamificationService {
 
     await _updateProgress('goal_count_3', count, 3);
     await _updateProgress('goal_count_5', count, 5);
+    await _updateProgress('goal_count_10', count, 10);
     await _updateProgress('goal_reached_3', reachedCount, 3);
     await _updateProgress('goal_reached_5', reachedCount, 5);
+    await _updateProgress('goal_reached_10', reachedCount, 10);
 
     await _evaluateAndNotify(toEval);
   }
