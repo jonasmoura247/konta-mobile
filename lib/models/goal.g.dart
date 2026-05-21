@@ -1,4 +1,6 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
+// ⚠️  KONTA PATCH: null-safety aplicada manualmente. Se regenerar, re-aplicar os ?? fallbacks.
+// Ver: Plano 6 — Hive Migration Safety
 
 part of 'goal.dart';
 
@@ -17,10 +19,10 @@ class GoalAdapter extends TypeAdapter<Goal> {
       for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
     };
     return Goal(
-      id: fields[0] as String,
-      name: fields[1] as String,
-      targetAmount: fields[2] as double,
-      savedAmount: fields[3] as double,
+      id: fields[0] as String? ?? '',
+      name: fields[1] as String? ?? '',
+      targetAmount: (fields[2] as num?)?.toDouble() ?? 0.0,
+      savedAmount: (fields[3] as num?)?.toDouble() ?? 0.0,
     );
   }
 

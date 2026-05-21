@@ -55,7 +55,7 @@ class _TransactionsScreenState extends State<TransactionsScreen>
   bool _initialLoadDone = false;
 
   static const _cartaoGroups = {
-    'avista': 'À Vista',
+    'avista': 'Crédito',
     'parcelamento': 'Parcelamento',
     'assinatura': 'Assinatura',
   };

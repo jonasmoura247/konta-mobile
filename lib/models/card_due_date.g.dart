@@ -1,4 +1,6 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
+// ⚠️  KONTA PATCH: null-safety aplicada manualmente. Se regenerar, re-aplicar os ?? fallbacks.
+// Ver: Plano 6 — Hive Migration Safety
 
 part of 'card_due_date.dart';
 
@@ -17,9 +19,9 @@ class CardDueDateAdapter extends TypeAdapter<CardDueDate> {
       for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
     };
     return CardDueDate(
-      bankId: fields[0] as String,
-      closureDay: fields[1] as int,
-      paymentDay: fields[2] as int,
+      bankId: fields[0] as String? ?? '',
+      closureDay: (fields[1] as num?)?.toInt() ?? 1,
+      paymentDay: (fields[2] as num?)?.toInt() ?? 10,
       overrideClosure: (fields[3] as Map?)?.cast<String, int>(),
       overridePayment: (fields[4] as Map?)?.cast<String, int>(),
     );

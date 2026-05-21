@@ -1,7 +1,7 @@
 name: konta
 description: "Konta — Controle financeiro pessoal e familiar."
 publish_to: 'none'
-version: 1.2.1+11
+version: 1.3.0+17
 
 environment:
   sdk: '>=3.0.0 <4.0.0'

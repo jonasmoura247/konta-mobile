@@ -1,4 +1,6 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
+// ⚠️  KONTA PATCH: null-safety aplicada manualmente. Se regenerar, re-aplicar os ?? fallbacks.
+// Ver: Plano 6 — Hive Migration Safety
 
 part of 'app_settings.dart';
 
@@ -17,14 +19,14 @@ class AppSettingsAdapter extends TypeAdapter<AppSettings> {
       for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
     };
     return AppSettings(
-      currency: fields[0] as String,
-      theme: fields[1] as String,
-      familyMode: fields[2] as bool,
-      familyCount: fields[3] as int,
+      currency: fields[0] as String? ?? 'BRL',
+      theme: fields[1] as String? ?? 'dark',
+      familyMode: fields[2] as bool? ?? false,
+      familyCount: fields[3] as int? ?? 2,
       familyNames: (fields[4] as List?)?.cast<String>(),
-      carryoverMode: fields[5] as bool,
-      goalsEnabled: fields[6] as bool,
-      privacyAccepted: fields[7] as bool,
+      carryoverMode: fields[5] as bool? ?? false,
+      goalsEnabled: fields[6] as bool? ?? false,
+      privacyAccepted: fields[7] as bool? ?? false,
     );
   }
 

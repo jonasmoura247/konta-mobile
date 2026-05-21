@@ -27,8 +27,8 @@ class _ChartsCarouselState extends State<ChartsCarousel> {
     'assinatura': AppColors.accent,
   };
   static const _groupLabels = <String, String>{
-    'avista': 'À Vista',
-    'parcelamento': 'Parcelado',
+    'avista': 'Crédito',
+    'parcelamento': 'Parcelamento',
     'assinatura': 'Assinatura',
   };
 

@@ -28,7 +28,7 @@ DateTime lastDayOfMonth(DateTime d) => DateTime(d.year, d.month + 1, 0);
 
 String groupLabel(String groupId) {
   switch (groupId) {
-    case 'avista': return 'À Vista';
+    case 'avista': return 'Crédito';
     case 'parcelamento': return 'Parcelamento';
     case 'assinatura': return 'Assinatura';
     case 'debito': return 'Débito';

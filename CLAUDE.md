@@ -55,3 +55,34 @@ Sempre que solicitado para criar um plano:
 - Formatação de moeda e datas via `lib/utils/formatters.dart`
 - Reatividade via `DatabaseService.dataVersion` (ValueNotifier) — não criar novos Providers Riverpod sem discussão
 - Novos modelos Hive precisam de `typeId` único e `build_runner` para gerar o adapter `.g.dart`
+
+## ⚠️ Atenção: Arquivos `.g.dart` com patches manuais
+
+Os arquivos `lib/models/*.g.dart` foram modificados manualmente com patches de **null-safety** (Plano 6 — Hive Migration Safety). Se você rodar:
+
+```bash
+flutter pub run build_runner build --delete-conflicting-outputs
+```
+
+**os patches serão sobrescritos e o app voltará a crashar em dados corrompidos.**
+
+**Após qualquer regeneração de código, re-aplique os `?? fallback` em todos os adapters:**
+
+| Arquivo | Campos corrigidos |
+|---------|-------------------|
+| `transaction.g.dart` | `id`, `groupId`, `categoryId`, `description`, `totalAmount`, `installments`, `startDate`, `createdAt` |
+| `income.g.dart` | `id`, `description`, `amount`, `date` |
+| `app_settings.g.dart` | `currency`, `theme` |
+| `achievement.g.dart` | `id`, `title`, `description`, `stars` |
+| `goal.g.dart` | `id`, `name`, `targetAmount`, `savedAmount` |
+| `streak_data.g.dart` | `currentStreak`, `longestStreak` |
+| `reserve.g.dart` | `id`, `description`, `amount`, `date`, `type` |
+| `reserve_snapshot.g.dart` | `reserveId`, `amount`, `date`, `type` |
+| `reminder.g.dart` | `id`, `date`, `hour`, `minute`, `description` |
+| `card_due_date.g.dart` | `bankId`, `closureDay`, `paymentDay` |
+
+Padrão dos patches:
+- `fields[N] as String` → `fields[N] as String? ?? 'fallback'`
+- `fields[N] as double` → `(fields[N] as num?)?.toDouble() ?? 0.0`
+- `fields[N] as int` → `(fields[N] as num?)?.toInt() ?? 0`
+- `fields[N] as DateTime` → `fields[N] as DateTime? ?? DateTime.now()`

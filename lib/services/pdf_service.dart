@@ -25,7 +25,7 @@ class PdfService {
   static String _groupName(String groupId) {
     switch (groupId) {
       case 'avista':
-        return 'À Vista';
+        return 'Crédito';
       case 'parcelamento':
         return 'Parcelamento';
       case 'assinatura':

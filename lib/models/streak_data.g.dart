@@ -1,4 +1,6 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
+// ⚠️  KONTA PATCH: null-safety aplicada manualmente. Se regenerar, re-aplicar os ?? fallbacks.
+// Ver: Plano 6 — Hive Migration Safety
 
 part of 'streak_data.dart';
 
@@ -17,8 +19,8 @@ class StreakDataAdapter extends TypeAdapter<StreakData> {
       for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
     };
     return StreakData(
-      currentStreak: fields[0] as int,
-      longestStreak: fields[1] as int,
+      currentStreak: (fields[0] as num?)?.toInt() ?? 0,
+      longestStreak: (fields[1] as num?)?.toInt() ?? 0,
       lastActiveDay: fields[2] as DateTime?,
     );
   }

@@ -1,4 +1,6 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
+// ⚠️  KONTA PATCH: null-safety aplicada manualmente. Se regenerar, re-aplicar os ?? fallbacks.
+// Ver: Plano 6 — Hive Migration Safety
 
 part of 'reminder.dart';
 
@@ -17,11 +19,11 @@ class ReminderAdapter extends TypeAdapter<Reminder> {
       for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
     };
     return Reminder(
-      id: fields[0] as String,
-      date: fields[1] as DateTime,
-      hour: fields[2] as int,
-      minute: fields[3] as int,
-      description: fields[4] as String,
+      id: fields[0] as String? ?? '',
+      date: fields[1] as DateTime? ?? DateTime.now(),
+      hour: (fields[2] as num?)?.toInt() ?? 0,
+      minute: (fields[3] as num?)?.toInt() ?? 0,
+      description: fields[4] as String? ?? '',
       categoryId: fields[5] as String?,
       bankId: fields[6] as String?,
     );

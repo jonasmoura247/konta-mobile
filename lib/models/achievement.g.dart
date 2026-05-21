@@ -1,4 +1,6 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
+// ⚠️  KONTA PATCH: null-safety aplicada manualmente. Se regenerar, re-aplicar os ?? fallbacks.
+// Ver: Plano 6 — Hive Migration Safety
 
 part of 'achievement.dart';
 
@@ -17,14 +19,14 @@ class AchievementAdapter extends TypeAdapter<Achievement> {
       for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
     };
     return Achievement(
-      id: fields[0] as String,
-      title: fields[1] as String,
-      description: fields[2] as String,
-      stars: fields[3] as int,
-      hidden: fields[4] as bool,
-      unlocked: fields[5] as bool,
+      id: fields[0] as String? ?? '',
+      title: fields[1] as String? ?? '',
+      description: fields[2] as String? ?? '',
+      stars: (fields[3] as num?)?.toInt() ?? 1,
+      hidden: fields[4] as bool? ?? false,
+      unlocked: fields[5] as bool? ?? false,
       unlockedAt: fields[6] as DateTime?,
-      criteria: fields[7] as String,
+      criteria: fields[7] as String? ?? '',
       progress: fields[8] as int?,
       goal: fields[9] as int?,
     );

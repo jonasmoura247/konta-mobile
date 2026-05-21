@@ -419,25 +419,25 @@ class _AddTransactionFormState extends State<AddTransactionForm>
                   scrollDirection: Axis.horizontal,
                   child: Row(
                     children: [
-                      _TypeChip('À Vista', 'avista', _groupId,
-                          (v) => setState(() {
-                                _groupId = v;
-                                _invoiceMonth = null;
-                              })),
-                      const SizedBox(width: 6),
-                      _TypeChip('Parcelado', 'parcelamento', _groupId,
-                          (v) => setState(() {
-                                _groupId = v;
-                                _invoiceMonth = null;
-                              })),
-                      const SizedBox(width: 6),
-                      _TypeChip('Assinatura', 'assinatura', _groupId,
+                      _TypeChip('Crédito', 'avista', _groupId,
                           (v) => setState(() {
                                 _groupId = v;
                                 _invoiceMonth = null;
                               })),
                       const SizedBox(width: 6),
                       _TypeChip('Débito', 'debito', _groupId,
+                          (v) => setState(() {
+                                _groupId = v;
+                                _invoiceMonth = null;
+                              })),
+                      const SizedBox(width: 6),
+                      _TypeChip('Parcelamento', 'parcelamento', _groupId,
+                          (v) => setState(() {
+                                _groupId = v;
+                                _invoiceMonth = null;
+                              })),
+                      const SizedBox(width: 6),
+                      _TypeChip('Assinatura', 'assinatura', _groupId,
                           (v) => setState(() {
                                 _groupId = v;
                                 _invoiceMonth = null;

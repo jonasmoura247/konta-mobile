@@ -1,4 +1,6 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
+// ⚠️  KONTA PATCH: null-safety aplicada manualmente. Se regenerar, re-aplicar os ?? fallbacks.
+// Ver: Plano 6 — Hive Migration Safety
 
 part of 'reserve.dart';
 
@@ -17,11 +19,11 @@ class ReserveAdapter extends TypeAdapter<Reserve> {
       for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
     };
     return Reserve(
-      id: fields[0] as String,
-      description: fields[1] as String,
-      amount: fields[2] as double,
-      date: fields[3] as DateTime,
-      type: fields[4] as String,
+      id: fields[0] as String? ?? '',
+      description: fields[1] as String? ?? '',
+      amount: (fields[2] as num?)?.toDouble() ?? 0.0,
+      date: fields[3] as DateTime? ?? DateTime.now(),
+      type: fields[4] as String? ?? 'entrada',
     );
   }
 

@@ -1,4 +1,6 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
+// ⚠️  KONTA PATCH: null-safety aplicada manualmente. Se regenerar, re-aplicar os ?? fallbacks.
+// Ver: Plano 6 — Hive Migration Safety
 
 part of 'income.dart';
 
@@ -17,12 +19,12 @@ class IncomeAdapter extends TypeAdapter<Income> {
       for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
     };
     return Income(
-      id: fields[0] as String,
-      description: fields[1] as String,
-      amount: fields[2] as double,
-      date: fields[3] as DateTime,
-      recurring: fields[4] as bool,
-      isFamilyValue: fields[5] as bool,
+      id: fields[0] as String? ?? '',
+      description: fields[1] as String? ?? '',
+      amount: (fields[2] as num?)?.toDouble() ?? 0.0,
+      date: fields[3] as DateTime? ?? DateTime.now(),
+      recurring: fields[4] as bool? ?? false,
+      isFamilyValue: fields[5] as bool? ?? false,
     );
   }
 

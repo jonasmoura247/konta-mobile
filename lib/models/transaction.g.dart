@@ -1,4 +1,6 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
+// ⚠️  KONTA PATCH: null-safety aplicada manualmente. Se regenerar, re-aplicar os ?? fallbacks.
+// Ver: Plano 6 — Hive Migration Safety
 
 part of 'transaction.dart';
 
@@ -17,19 +19,19 @@ class TransactionAdapter extends TypeAdapter<Transaction> {
       for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
     };
     return Transaction(
-      id: fields[0] as String,
-      groupId: fields[1] as String,
-      categoryId: fields[2] as String,
-      description: fields[3] as String,
-      totalAmount: fields[4] as double,
-      installments: fields[5] as int,
-      startDate: fields[6] as DateTime,
-      isSubscription: fields[7] as bool,
+      id: fields[0] as String? ?? '',
+      groupId: fields[1] as String? ?? 'avista',
+      categoryId: fields[2] as String? ?? 'outros',
+      description: fields[3] as String? ?? '',
+      totalAmount: (fields[4] as num?)?.toDouble() ?? 0.0,
+      installments: (fields[5] as num?)?.toInt() ?? 1,
+      startDate: fields[6] as DateTime? ?? DateTime.now(),
+      isSubscription: fields[7] as bool? ?? false,
       bankId: fields[8] as String?,
-      familyMode: fields[9] as bool,
+      familyMode: fields[9] as bool? ?? false,
       familyMember: fields[10] as String?,
       cancelledFrom: fields[11] as DateTime?,
-      createdAt: fields[12] as DateTime,
+      createdAt: fields[12] as DateTime? ?? DateTime.now(),
       subscriptionSeriesId: fields[13] as String?,
       paymentSubtype: fields[14] as String?,
       applyClosureDate: fields[15] as bool? ?? false,
